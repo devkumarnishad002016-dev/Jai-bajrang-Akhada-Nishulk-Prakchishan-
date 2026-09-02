@@ -1,0 +1,6 @@
+{
+  "name": "Jai Bajrang Akhada",
+  "description": "Sena Police Mission - Training & Government Exam Preparation",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

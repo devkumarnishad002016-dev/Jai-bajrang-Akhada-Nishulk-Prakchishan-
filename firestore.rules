@@ -1,0 +1,248 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==========================================
+    // HELPER FUNCTIONS & AUTHENTICATION CONTEXT
+    // ==========================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Admin Role verification: Custom claims (Priority) OR verified server-controlled User Document
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.role == 'ADMIN' ||
+        request.auth.token.admin == true ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN'
+      );
+    }
+
+    // Coach/Trainer Role verification
+    function isTrainer() {
+      return isAuthenticated() && (
+        request.auth.token.role == 'TRAINER' ||
+        request.auth.token.role == 'COACH' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'TRAINER' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'COACH'
+      );
+    }
+
+    // Combined Staff permission (Admin OR Trainer)
+    function isStaff() {
+      return isAdmin() || isTrainer();
+    }
+
+    // Secure Student Ownership: Authenticated UID MUST map to studentId in users/{uid} or custom claim
+    function isStudentOwner(studentId) {
+      return isAuthenticated() && (
+        request.auth.token.studentId == studentId ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.studentId == studentId
+      );
+    }
+
+    // Strict Date Validation for Attendance: Must match server request date (UTC/IST bounds)
+    function isServerCurrentDate(dateStr) {
+      let y = string(request.time.year());
+      let m = request.time.month() < 10 ? '0' + string(request.time.month()) : string(request.time.month());
+      let d = request.time.day() < 10 ? '0' + string(request.time.day()) : string(request.time.day());
+      let serverToday = y + '-' + m + '-' + d;
+      return dateStr == serverToday;
+    }
+
+    // ==========================================
+    // 1. USERS COLLECTION (Account & Role Mapping)
+    // ==========================================
+    match /users/{userId} {
+      // User can read their own profile; Admin can read all
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+
+      // User can create their account doc on initial signup, but CANNOT self-assign 'ADMIN' or 'TRAINER'/'COACH' role
+      allow create: if isAuthenticated() && request.auth.uid == userId
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.role != 'ADMIN'
+                    && request.resource.data.role != 'TRAINER'
+                    && request.resource.data.role != 'COACH';
+
+      // User cannot elevate their own role upon update; only Admin can assign/modify roles
+      allow update: if isAdmin() || (
+        isAuthenticated() && request.auth.uid == userId
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.studentId == resource.data.studentId
+      );
+
+      // Deletion is strictly reserved for Admin
+      allow delete: if isAdmin();
+    }
+
+    // ==========================================
+    // 2. STUDENTS COLLECTION (Cadet Profiles)
+    // ==========================================
+    match /students/{studentId} {
+      // Cadet can only read their own profile; Staff (Admin + Trainer) can read all cadet profiles
+      allow read: if isStudentOwner(studentId) || isStaff();
+
+      // Staff can enroll or update student records; Only Admin can delete
+      allow create, update: if isStaff();
+      allow delete: if isAdmin();
+    }
+
+    // ==========================================
+    // 3. ATTENDANCE COLLECTION
+    // ==========================================
+    match /attendance_records/{recordId} {
+      // Cadet can read only their own attendance records; Staff can read all
+      allow read: if isAuthenticated() && (isStudentOwner(resource.data.studentId) || isStaff());
+
+      // Cadet can CREATE attendance ONLY for themselves and ONLY for current date; Staff can mark anytime
+      allow create: if isAuthenticated() && (
+        (isStudentOwner(request.resource.data.studentId) && isServerCurrentDate(request.resource.data.date))
+        || isStaff()
+      );
+
+      // Staff (Admin + Trainer) can correct attendance; Only Admin can delete
+      allow update: if isStaff();
+      allow delete: if isAdmin();
+    }
+
+    // ==========================================
+    // 4. TRAINING RECORDS (Physical Ground Metrics)
+    // ==========================================
+    match /training_records/{recordId} {
+      // Cadet can read only their own training records; Staff can read all
+      allow read: if isAuthenticated() && (isStudentOwner(resource.data.studentId) || isStaff());
+
+      // Cadets can log their daily physical workouts for their own profile; Staff can log for cadets
+      allow create: if isAuthenticated() && (isStudentOwner(request.resource.data.studentId) || isStaff());
+
+      // Staff can update training logs; Only Admin can delete
+      allow update: if isStaff();
+      allow delete: if isAdmin();
+    }
+
+    // ==========================================
+    // 5. WORKOUT PLANS (Ground Training Routine)
+    // ==========================================
+    match /workout_plans/{planId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isStaff();
+      allow delete: if isAdmin();
+    }
+
+    // ==========================================
+    // 5B. RACE SESSIONS & 1600M BATCH RESULTS (Phase 2B)
+    // ==========================================
+    match /race_sessions/{sessionId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isStaff();
+      allow delete: if isAdmin();
+    }
+
+    match /race_results/{resultId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isStaff();
+      allow delete: if isAdmin();
+    }
+
+    // ==========================================
+    // 6. TEST ATTEMPTS (Exam & Mock Results)
+    // ==========================================
+    match /test_attempts/{attemptId} {
+      // Cadet can read only their own test attempt results; Staff can read all
+      allow read: if isAuthenticated() && (isStudentOwner(resource.data.studentId) || isStaff());
+
+      // Cadet can submit their completed attempt for their own studentId; Staff can record attempt
+      allow create: if isAuthenticated() && (isStudentOwner(request.resource.data.studentId) || isStaff());
+
+      // Submitted scores are IMMUTABLE for students; only Admin can correct/delete
+      allow update, delete: if isAdmin();
+    }
+
+    // ==========================================
+    // 7. LEADERBOARD (Rankings & Competition)
+    // ==========================================
+    match /leaderboard/{rankId} {
+      allow read: if isAuthenticated();
+      allow write: if isStaff();
+    }
+
+    // ==========================================
+    // 8. QUESTIONS BANK (Exam MCQs - Admin CMS)
+    // ==========================================
+    match /questions/{questionId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // ==========================================
+    // 9. MOCK TESTS CONFIGURATION (Admin CMS)
+    // ==========================================
+    match /mock_tests/{testId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // ==========================================
+    // 10. PUBLIC & CMS CONTENT (Notices, Recruitment, Web CMS)
+    // ==========================================
+    match /notices/{noticeId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /recruitment_info/{infoId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /study_subjects/{subjectId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /study_topics/{topicId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /trainers/{trainerId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /gallery/{galleryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /success_stories/{storyId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /contact_info/{contactId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ==========================================
+    // 11. COMMUNICATION & NOTIFICATIONS (Phase 5B)
+    // ==========================================
+    match /app_notifications/{notifId} {
+      // Authenticated users (Students & Staff) can read notifications
+      allow read: if isAuthenticated();
+      // Admin can broadcast any notification category/target; Trainers can send training/study reminders
+      allow create: if isAdmin() || (isTrainer() && request.resource.data.senderRole == 'TRAINER');
+      // Students CANNOT modify or delete notification history; only Admins can
+      allow update, delete: if isAdmin();
+    }
+
+    // ==========================================
+    // 12. DEFAULT DENY (Catch-all Fallback)
+    // ==========================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
