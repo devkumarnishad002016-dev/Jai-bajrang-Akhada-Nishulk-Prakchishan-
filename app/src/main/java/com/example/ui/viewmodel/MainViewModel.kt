@@ -89,16 +89,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * Authenticates Admin using securely stored salted hash.
-     * Rejects empty/default bypasses.
+     * Authenticates Admin using securely stored salted hash or credentials.
+     * Supports Dev Kumar Nishad credentials (DEV98ADMIN / Dev@2312 or PIN 231298) and default bypasses.
      */
-    fun loginAsAdmin(pinInput: String): Boolean {
-        val trimmed = pinInput.trim()
+    fun loginAsAdmin(pinOrId: String, passwordInput: String = ""): Boolean {
+        val trimmed = pinOrId.trim()
         val isConfigured = AdminSecurityManager.isPinConfigured(getApplication())
         if (!isConfigured) {
             return false
         }
-        val isValid = AdminSecurityManager.verifyAdminPin(getApplication(), trimmed)
+        val isValid = AdminSecurityManager.verifyAdminCredentials(getApplication(), trimmed, passwordInput)
         if (isValid) {
             _currentRole.value = RolePermissionManager.ROLE_ADMIN
             authenticatedStaffRole = RolePermissionManager.ROLE_ADMIN
@@ -669,14 +669,106 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun markTodayAttendance(status: String, remarks: String = "") {
+        markAttendanceForDate(studentId = _activeStudentId.value, date = todayDateStr, status = status, remarks = remarks)
+    }
+
+    /**
+     * Records or updates attendance for any selected date (today or past dates).
+     */
+    fun markAttendanceForDate(
+        studentId: String = _activeStudentId.value,
+        date: String,
+        status: String,
+        remarks: String = ""
+    ) {
         viewModelScope.launch {
             val record = AttendanceRecord(
-                studentId = _activeStudentId.value,
-                date = todayDateStr,
+                studentId = studentId,
+                date = date,
                 status = status,
                 remarks = remarks
             )
             repository.markAttendance(record)
+        }
+    }
+
+    /**
+     * Sends a 1-on-1 doubt message or coach response and simulates coaching guidance if needed.
+     */
+    fun sendDoubtChatMessage(
+        studentId: String = _activeStudentId.value,
+        studentName: String,
+        text: String,
+        isCoachReply: Boolean = false
+    ) {
+        viewModelScope.launch {
+            val senderRole = if (isCoachReply) "TRAINER" else "STUDENT"
+            val senderName = if (isCoachReply) "देव कुमार निषाद (मुख्य कोच)" else studentName
+            val targetStudent = if (isCoachReply) studentId else "TR-001"
+
+            val notification = AppNotification(
+                title = if (isCoachReply) "कोच का उत्तर: $studentName" else "नया सवाल: $studentName",
+                message = text,
+                category = "DOUBT_CHAT",
+                senderId = if (isCoachReply) "TR-001" else studentId,
+                senderName = senderName,
+                senderRole = senderRole,
+                targetType = "SELECTED_STUDENTS",
+                targetStudentIds = studentId,
+                actionRoute = "coach_chat",
+                timestamp = System.currentTimeMillis()
+            )
+            repository.insertNotification(notification)
+
+            // If a student asked a question, provide an immediate simulated expert coach response
+            if (!isCoachReply) {
+                delay(800)
+                val coachResponseText = when {
+                    text.contains("1600", ignoreCase = true) || text.contains("रनिंग", ignoreCase = true) || text.contains("दौड़", ignoreCase = true) ->
+                        "जय हिन्द $studentName! 1600m में समय घटाने के लिए: (1) सप्ताह में 2 दिन 400m x 4 स्प्रिंट लगाएं। (2) पंजों (Ball of foot) पर लैंड करें। (3) सांस नाक से लें और मुंह से छोड़ें। सुबह 5:30 बजे ग्राउंड पर मिलें!"
+                    text.contains("डाइट", ignoreCase = true) || text.contains("चना", ignoreCase = true) || text.contains("खाना", ignoreCase = true) ->
+                        "डाइट टिप्स: सुबह रनिंग के तुरंत बाद भीगा हुआ काला चना + गुड़ + 2 केले लें। दिन में पर्याप्त पानी (3-4 लीटर) और रात को हल्दी वाला दूध लें। तली-भुनी चीजों से बचें।"
+                    text.contains("सीना", ignoreCase = true) || text.contains("chest", ignoreCase = true) || text.contains("हाइट", ignoreCase = true) ->
+                        "सीना 81-86 सेमी (5 सेमी फुलाव) के लिए: रोजाना 50-60 डीप पुश-अप्स और प्राणायाम (गहरी सांस रोककर फुलाव अभ्यास) करें। हाइट के लिए ताड़ासन और बीम पर लटकें।"
+                    text.contains("पुश", ignoreCase = true) || text.contains("पुल", ignoreCase = true) || text.contains("बीम", ignoreCase = true) ->
+                        "पुश-अप्स और बीम बढ़ाने के लिए 3 सेट में अभ्यास करें: 15-15-15 रेप्स। कोर मजबूत करने के लिए 90 सेकंड प्लैंक जरूर करें।"
+                    text.contains("मैथ्स", ignoreCase = true) || text.contains("रीजनिंग", ignoreCase = true) || text.contains("पढ़ाई", ignoreCase = true) ->
+                        "अध्ययन सुझाव: ऐप के 'मॉक टेस्ट' और 'स्टडी मटेरियल' में टॉपिक-वाइज शॉर्टकट फॉर्मूले देखें। रोजाना कम से कम 20 प्रश्न हल करें।"
+                    else ->
+                        "जय हिन्द $studentName! आपका प्रश्न प्राप्त हो गया है। ग्राउंड पर अभ्यास के दौरान इस पर विशेष मार्गदर्शन दिया जाएगा। अनुशासन और निरंतरता बनाए रखें!"
+                }
+
+                val replyNotification = AppNotification(
+                    title = "कोच का उत्तर: $studentName",
+                    message = coachResponseText,
+                    category = "DOUBT_CHAT",
+                    senderId = "TR-001",
+                    senderName = "देव कुमार निषाद (मुख्य कोच)",
+                    senderRole = "TRAINER",
+                    targetType = "SELECTED_STUDENTS",
+                    targetStudentIds = studentId,
+                    actionRoute = "coach_chat",
+                    timestamp = System.currentTimeMillis() + 100
+                )
+                repository.insertNotification(replyNotification)
+            }
+        }
+    }
+
+    /**
+     * Exports full database to JSON string.
+     */
+    suspend fun getFullDatabaseBackupJson(): String {
+        return com.example.util.BackupRestoreManager.createBackupJson(database.appDao())
+    }
+
+    /**
+     * Restores database from JSON string.
+     */
+    fun restoreDatabaseFromJson(jsonString: String, onResult: (Result<String>) -> Unit) {
+        viewModelScope.launch {
+            val result = com.example.util.BackupRestoreManager.restoreDatabase(database.appDao(), jsonString)
+            onResult(result)
         }
     }
 

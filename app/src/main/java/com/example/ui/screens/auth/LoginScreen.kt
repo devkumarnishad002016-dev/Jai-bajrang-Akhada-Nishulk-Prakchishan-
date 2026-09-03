@@ -1,6 +1,7 @@
 package com.example.ui.screens.auth
 
 import androidx.compose.animation.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,6 +24,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -32,8 +34,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.R
 import com.example.data.model.StudentProfile
 import com.example.ui.theme.*
+import com.example.util.AdminSecurityManager
 import com.example.util.ProfileUtils
 import java.util.Locale
 
@@ -43,6 +47,7 @@ fun LoginScreen(
     allStudents: List<StudentProfile>,
     onStudentLogin: (String, String) -> Boolean,
     onAdminLogin: (String) -> Boolean,
+    onAdminLoginWithCredentials: ((String, String) -> Boolean)? = null,
     onRegisterStudent: ((StudentProfile) -> Unit)? = null,
     isAdminPinConfigured: Boolean = true,
     onSetupInitialAdminPin: ((String) -> Result<Unit>)? = null,
@@ -63,6 +68,8 @@ fun LoginScreen(
     var isOtpSent by remember { mutableStateOf(false) }
     var isSendingOtp by remember { mutableStateOf(false) }
     var adminPinInput by remember { mutableStateOf("") }
+    var adminIdInput by remember { mutableStateOf("") }
+    var adminPasswordInput by remember { mutableStateOf("") }
     var setupNewPinInput by remember { mutableStateOf("") }
     var setupConfirmPinInput by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -106,21 +113,16 @@ fun LoginScreen(
                     // Akhada Shield Emblem
                     Box(
                         modifier = Modifier
-                            .size(68.dp)
+                            .size(76.dp)
                             .clip(CircleShape)
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(SaffronPrimary, SaffronDark, NavySecondary)
-                                )
-                            )
-                            .border(3.dp, SaffronPrimary.copy(alpha = 0.6f), CircleShape),
+                            .border(3.dp, SaffronPrimary, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Shield,
-                            contentDescription = "Akhada Emblem",
-                            tint = Color.White,
-                            modifier = Modifier.size(38.dp)
+                        Image(
+                            painter = painterResource(id = R.drawable.app_icon_emblem),
+                            contentDescription = "जय बजरंग अखाड़ा मौरीकला Emblem",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
                         )
                     }
 
@@ -761,17 +763,85 @@ fun LoginScreen(
                                 Text("पिन सुरक्षित करें एवं प्रवेश करें", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                             }
                         } else {
-                            // Standard Secure Admin PIN Login
-                            OutlinedTextField(
-                                value = adminPinInput,
-                                onValueChange = {
-                                    if (it.length <= 6 && it.all { c -> c.isDigit() }) {
-                                        adminPinInput = it
-                                        errorMessage = null
+                            // Secure Admin & Coach Login
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = CardDefaults.cardColors(containerColor = SaffronPrimary.copy(alpha = 0.08f)),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, SaffronPrimary.copy(alpha = 0.3f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(44.dp)
+                                            .clip(CircleShape)
+                                            .background(SaffronPrimary.copy(alpha = 0.2f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Security,
+                                            contentDescription = null,
+                                            tint = SaffronPrimary,
+                                            modifier = Modifier.size(24.dp)
+                                        )
                                     }
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Text(
+                                            text = "अधिकृत व्यवस्थापक / कोच पोर्टल",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = "कृपया अपनी गोपनीय ID एवं पासवर्ड दर्ज करें",
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+
+                            // 1. Admin ID / Mobile Input
+                            OutlinedTextField(
+                                value = adminIdInput,
+                                onValueChange = {
+                                    adminIdInput = it
+                                    errorMessage = null
                                 },
-                                label = { Text("प्रशिक्षक पिन (Admin PIN) *") },
-                                placeholder = { Text("अपना 4-6 अंकों का पिन दर्ज करें") },
+                                label = { Text("व्यवस्थापक ID / मोबाइल (Admin ID) *") },
+                                placeholder = { Text("अपनी अधिकृत ID दर्ज करें") },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Badge,
+                                        contentDescription = null,
+                                        tint = SaffronPrimary
+                                    )
+                                },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Text,
+                                    imeAction = ImeAction.Next
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("admin_id_input"),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+
+                            // 2. Admin Password / PIN Input
+                            OutlinedTextField(
+                                value = adminPasswordInput,
+                                onValueChange = {
+                                    adminPasswordInput = it
+                                    adminPinInput = it
+                                    errorMessage = null
+                                },
+                                label = { Text("पासवर्ड / 6-अंक पिन (Password / PIN) *") },
+                                placeholder = { Text("अपना गोपनीय पासवर्ड या पिन दर्ज करें") },
                                 leadingIcon = {
                                     Icon(
                                         imageVector = Icons.Default.Lock,
@@ -790,16 +860,18 @@ fun LoginScreen(
                                 visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(
-                                    keyboardType = KeyboardType.NumberPassword,
+                                    keyboardType = KeyboardType.Password,
                                     imeAction = ImeAction.Done
                                 ),
                                 keyboardActions = KeyboardActions(
                                     onDone = {
-                                        val adminSuccess = onAdminLogin(adminPinInput)
+                                        val inputPass = adminPasswordInput.ifBlank { adminPinInput }
+                                        val adminSuccess = onAdminLoginWithCredentials?.invoke(adminIdInput, inputPass)
+                                            ?: onAdminLogin(if (inputPass.isNotBlank()) inputPass else adminIdInput)
                                         if (!adminSuccess) {
-                                            val trainerSuccess = onTrainerLogin?.invoke(adminPinInput) ?: false
+                                            val trainerSuccess = onTrainerLogin?.invoke(inputPass) ?: false
                                             if (!trainerSuccess) {
-                                                errorMessage = "गलत पिन! कृपया सही व्यवस्थापक या कोच पिन दर्ज करें।"
+                                                errorMessage = "गलत क्रेडेंशियल्स! कृपया सही व्यवस्थापक ID एवं पासवर्ड दर्ज करें।"
                                             }
                                         }
                                     }
@@ -810,13 +882,16 @@ fun LoginScreen(
                                 shape = RoundedCornerShape(12.dp)
                             )
 
+                            // Login Button
                             Button(
                                 onClick = {
-                                    val adminSuccess = onAdminLogin(adminPinInput)
+                                    val inputPass = adminPasswordInput.ifBlank { adminPinInput }
+                                    val adminSuccess = onAdminLoginWithCredentials?.invoke(adminIdInput, inputPass)
+                                        ?: onAdminLogin(if (inputPass.isNotBlank()) inputPass else adminIdInput)
                                     if (!adminSuccess) {
-                                        val trainerSuccess = onTrainerLogin?.invoke(adminPinInput) ?: false
+                                        val trainerSuccess = onTrainerLogin?.invoke(inputPass) ?: false
                                         if (!trainerSuccess) {
-                                            errorMessage = "गलत पिन! कृपया सही व्यवस्थापक या कोच पिन दर्ज करें।"
+                                            errorMessage = "गलत क्रेडेंशियल्स! कृपया सही व्यवस्थापक ID एवं पासवर्ड दर्ज करें।"
                                         }
                                     }
                                 },
@@ -829,7 +904,7 @@ fun LoginScreen(
                             ) {
                                 Icon(Icons.Default.AdminPanelSettings, contentDescription = null)
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("स्टाफ / कोच प्रवेश (Staff Login)", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                Text("व्यवस्थापक / कोच प्रवेश (Admin Login)", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                             }
 
                             TextButton(

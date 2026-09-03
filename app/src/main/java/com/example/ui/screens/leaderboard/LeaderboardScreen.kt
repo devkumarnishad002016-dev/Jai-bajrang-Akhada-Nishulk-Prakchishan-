@@ -33,14 +33,19 @@ fun LeaderboardScreen(
     onSelectStudent: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var selectedCategory by remember { mutableStateOf("Overall") } // "Overall", "1600m Running", "Pushups", "Score"
+    var selectedCategory by remember { mutableStateOf("Overall") }
 
     val sortedStudents: List<StudentProfile> = remember(allStudents, selectedCategory) {
         when (selectedCategory) {
-            "1600m Running" -> allStudents.sortedBy { it.time1600m }
-            "Pushups" -> allStudents.sortedByDescending { it.pushups }
-            "Score" -> allStudents.sortedByDescending { it.studyTargetPercentage }
-            else -> allStudents.sortedByDescending { it.studyTargetPercentage + it.pushups }
+            "Attendance" -> allStudents.sortedByDescending { it.attendanceStreakDays }
+            "Runner" -> allStudents.sortedWith(compareBy<StudentProfile> {
+                val t = it.time1600m.trim()
+                if (t.isBlank() || t == "--") "99:99" else t
+            }.thenByDescending { it.overallScore })
+            "Student" -> allStudents.sortedByDescending { it.studyTargetPercentage }
+            "MostImproved" -> allStudents.sortedByDescending { (it.studyTargetPercentage * 2) + (it.pushups * 3) }
+            "Champion" -> allStudents.sortedByDescending { (it.attendanceStreakDays * 10) + (it.studyTargetPercentage) + (it.pushups * 2) }
+            else -> allStudents.sortedByDescending { it.studyTargetPercentage + (it.pushups * 2) + (it.attendanceStreakDays * 5) }
         }
     }
 
@@ -95,9 +100,11 @@ fun LeaderboardScreen(
         item {
             val categories = listOf(
                 "Overall" to "समग्र रैंक (Overall)",
-                "1600m Running" to "1600m रनिंग",
-                "Pushups" to "पुश-अप्स & बीम",
-                "Score" to "स्टडी & टेस्ट स्कोर"
+                "Attendance" to "सर्वश्रेष्ठ उपस्थिति (Best Attendance)",
+                "Runner" to "सर्वश्रेष्ठ धावक (Best Runner)",
+                "Student" to "सर्वश्रेष्ठ विद्यार्थी (Best Student)",
+                "MostImproved" to "सर्वाधिक सुधार (Most Improved)",
+                "Champion" to "साप्ताहिक चैंपियन (Weekly Champion)"
             )
 
             LazyRow(

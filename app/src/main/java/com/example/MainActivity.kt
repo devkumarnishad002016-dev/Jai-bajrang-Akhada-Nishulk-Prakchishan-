@@ -19,6 +19,7 @@ import com.example.ui.components.AppTopHeader
 import com.example.ui.screens.auth.LoginScreen
 import com.example.ui.screens.admin.*
 import com.example.ui.screens.attendance.AttendanceScreen
+import com.example.ui.screens.chat.CoachDoubtChatScreen
 import com.example.ui.screens.dashboard.DashboardScreen
 import com.example.ui.screens.exam.ActiveTestScreen
 import com.example.ui.screens.exam.MockTestScreen
@@ -31,6 +32,7 @@ import com.example.ui.screens.monthly.MonthlyPerformanceScreen
 import com.example.ui.screens.profile.StudentProfileScreen
 import com.example.ui.screens.progress.ProgressAndAiCoachScreen
 import com.example.ui.screens.study.StudyScreen
+import com.example.ui.screens.mission.*
 import com.example.ui.screens.content.*
 import com.example.ui.screens.training.*
 import com.example.ui.screens.workout.WorkoutScreen
@@ -55,6 +57,7 @@ class MainActivity : ComponentActivity() {
                         allStudents = allStudents,
                         onStudentLogin = { id, password -> viewModel.loginAsStudent(id, password) },
                         onAdminLogin = { pin -> viewModel.loginAsAdmin(pin) },
+                        onAdminLoginWithCredentials = { id, password -> viewModel.loginAsAdmin(id, password) },
                         onTrainerLogin = { pin -> viewModel.loginAsTrainer(pin) },
                         onRegisterStudent = { newStudent ->
                             viewModel.addStudent(newStudent)
@@ -128,11 +131,23 @@ fun MainApp(viewModel: MainViewModel) {
     val latestAttemptResult by viewModel.latestAttemptResult.collectAsState()
 
     val isFullScreenTest = currentRoute == "active_test"
+    val isMainTabScreen = currentRoute in listOf(
+        "dashboard",
+        "training",
+        "attendance",
+        "workout",
+        "study",
+        "mocktest",
+        "progress",
+        "aicoach",
+        "profile",
+        "admin_dashboard"
+    )
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            if (!isFullScreenTest) {
+            if (isMainTabScreen) {
                 AppTopHeader(
                     currentRole = currentRole,
                     activeStudent = activeStudent,
@@ -227,7 +242,50 @@ fun MainApp(viewModel: MainViewModel) {
                     student = activeStudent,
                     attendanceRecords = activeAttendance,
                     todayAttendance = todayAttendance,
-                    onMarkTodayStatus = { st -> viewModel.markTodayAttendance(st) }
+                    onMarkTodayStatus = { st -> viewModel.markTodayAttendance(st) },
+                    onMarkStatusForDate = { date, st, rem ->
+                        viewModel.markAttendanceForDate(
+                            studentId = activeStudent?.studentId ?: "JBA-2026-001",
+                            date = date,
+                            status = st,
+                            remarks = rem
+                        )
+                    },
+                    onNavigateToChat = { navController.navigate("coach_chat") }
+                )
+            }
+
+            composable("coach_chat") {
+                CoachDoubtChatScreen(
+                    student = activeStudent,
+                    allMessages = allNotifications,
+                    currentRole = currentRole,
+                    onSendMessage = { text, isCoachReply ->
+                        viewModel.sendDoubtChatMessage(
+                            studentId = activeStudent?.studentId ?: "JBA-2026-001",
+                            studentName = activeStudent?.fullName ?: "कैडेट",
+                            text = text,
+                            isCoachReply = isCoachReply
+                        )
+                    },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            composable("chat") {
+                CoachDoubtChatScreen(
+                    student = activeStudent,
+                    allMessages = allNotifications,
+                    currentRole = currentRole,
+                    onSendMessage = { text, isCoachReply ->
+                        viewModel.sendDoubtChatMessage(
+                            studentId = activeStudent?.studentId ?: "JBA-2026-001",
+                            studentName = activeStudent?.fullName ?: "कैडेट",
+                            text = text,
+                            isCoachReply = isCoachReply
+                        )
+                    },
+                    onBack = { navController.popBackStack() }
                 )
             }
 
@@ -398,6 +456,7 @@ fun MainApp(viewModel: MainViewModel) {
             composable("notices") {
                 NoticeBoardScreen(
                     notices = allNotices,
+                    onNavigateBack = { navController.popBackStack() },
                     onTogglePin = { n -> viewModel.toggleNoticePin(n) },
                     onMarkRead = { n -> viewModel.markNoticeRead(n) }
                 )
@@ -441,6 +500,9 @@ fun MainApp(viewModel: MainViewModel) {
             composable("trainers") {
                 TrainersScreen(
                     trainers = allTrainers,
+                    isAdmin = RolePermissionManager.isAdmin(currentRole),
+                    onAddTrainer = { trainer -> viewModel.addTrainer(trainer) },
+                    onDeleteTrainer = { trainer -> viewModel.deleteTrainer(trainer) },
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
@@ -544,22 +606,23 @@ fun MainApp(viewModel: MainViewModel) {
             }
 
             composable("admin_study") {
-                StudyScreen(
-                    allChapters = allChapters,
+                AdminStudyHubScreen(
+                    allQuestions = allQuestions,
                     allSubjects = allSubjects,
                     allTopics = allTopics,
-                    allQuestions = allQuestions,
-                    studentStudyAttempts = studentStudyAttempts,
-                    selectedSubject = selectedSubject,
-                    onSelectSubject = { sub -> viewModel.setSelectedSubject(sub) },
-                    onToggleChapter = { ch -> viewModel.toggleChapterCompletion(ch) },
-                    onStartChapterQuiz = { ch ->
-                        viewModel.startChapterQuiz(ch)
-                        navController.navigate("active_test")
-                    },
-                    onRecordAttempt = { qId, sId, tId, sel, isCorr, time ->
-                        viewModel.recordStudyQuestionAttempt(qId, sId, tId, sel, isCorr, time)
-                    }
+                    allChapters = allChapters,
+                    allStudents = allStudents,
+                    allTestAttempts = studentTestAttempts,
+                    onAddQuestion = { q -> viewModel.addQuestion(q) },
+                    onUpdateQuestion = { q -> viewModel.updateQuestion(q) },
+                    onDeleteQuestion = { q -> viewModel.deleteQuestion(q) },
+                    onToggleActive = { q -> viewModel.toggleQuestionActive(q) },
+                    onAddSubject = { s -> viewModel.addSubject(s) },
+                    onAddTopic = { t -> viewModel.addTopic(t) },
+                    onAddChapter = { ch -> viewModel.addChapter(ch) },
+                    onUpdateChapter = { ch -> viewModel.updateChapter(ch) },
+                    onDeleteChapter = { ch -> viewModel.deleteChapter(ch) },
+                    onTogglePublishChapter = { ch -> viewModel.toggleChapterPublish(ch) }
                 )
             }
 
@@ -686,6 +749,7 @@ fun MainApp(viewModel: MainViewModel) {
                 StudentNotificationsScreen(
                     studentProfile = activeStudent,
                     allNotifications = allNotifications,
+                    allNotices = allNotices,
                     onMarkAsRead = { notifId -> viewModel.markNotificationAsRead(notifId) },
                     onMarkAllAsRead = { viewModel.markAllNotificationsAsRead() },
                     onNavigateToRoute = { route ->
@@ -695,6 +759,80 @@ fun MainApp(viewModel: MainViewModel) {
                         }
                     },
                     onBack = { navController.popBackStack() }
+                )
+            }
+
+            // ==========================================
+            // PHASE 4: GRAMIN DIGITAL MISSION ROUTES
+            // ==========================================
+
+            composable("mission_timeline") {
+                MissionTimelineScreen(
+                    student = activeStudent,
+                    todayWorkout = todayWorkout,
+                    todayTraining = todayTraining,
+                    todayChapters = publishedChapters,
+                    studentStudyAttempts = studentStudyAttempts,
+                    studentTestAttempts = studentTestAttempts,
+                    onNavigateToWorkout = { navController.navigate("workout") },
+                    onNavigateToStudy = { navController.navigate("study") },
+                    onNavigateToMockTest = { navController.navigate("mocktest") },
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable("physical_simulator") {
+                PhysicalTestSimulatorScreen(
+                    student = activeStudent,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable("digital_library") {
+                VillageDigitalLibraryScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable("recruitment_roadmap") {
+                RecruitmentRoadmapScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable("parent_progress") {
+                ParentProgressScreen(
+                    student = activeStudent,
+                    attendanceRecords = activeAttendance,
+                    workoutRecords = activeWorkouts,
+                    trainingRecords = activeTrainingRecords,
+                    testAttempts = studentTestAttempts,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable("trainer_alerts") {
+                TrainerAlertsScreen(
+                    allStudents = allStudents,
+                    allAttendance = allAttendanceRecords,
+                    allTraining = allTrainingRecords,
+                    allTestAttempts = studentTestAttempts,
+                    onSendAlertToStudent = { student, message ->
+                        viewModel.sendCommunicationNotification(
+                            title = "अखाड़ा कोच विशेष अलर्ट",
+                            message = message,
+                            category = com.example.data.model.AppNotification.CATEGORY_TRAINING_REMINDER,
+                            targetType = com.example.data.model.AppNotification.TARGET_SELECTED_STUDENTS,
+                            targetStudentIds = listOf(student.studentId),
+                            targetBatch = "",
+                            targetTrainerId = "",
+                            actionRoute = "training",
+                            isUrgent = true,
+                            onSuccess = {},
+                            onError = {}
+                        )
+                    },
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
         }

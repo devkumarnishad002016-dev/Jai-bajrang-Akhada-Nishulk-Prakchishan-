@@ -410,8 +410,22 @@ fun TrainingCentreScreen(
 fun TrainersScreen(
     trainers: List<Trainer>,
     onNavigateBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isAdmin: Boolean = false,
+    onAddTrainer: (Trainer) -> Unit = {},
+    onDeleteTrainer: (Trainer) -> Unit = {}
 ) {
+    var showAddTrainerDialog by remember { mutableStateOf(false) }
+    var trainerToDelete by remember { mutableStateOf<Trainer?>(null) }
+
+    // Add Trainer Form States
+    var newTrainerName by remember { mutableStateOf("") }
+    var newTrainerBackground by remember { mutableStateOf("") }
+    var newTrainerSpecialization by remember { mutableStateOf("") }
+    var newTrainerExperience by remember { mutableStateOf("") }
+    var newTrainerIntro by remember { mutableStateOf("") }
+    var formError by remember { mutableStateOf<String?>(null) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -421,12 +435,34 @@ fun TrainersScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
+                actions = {
+                    if (isAdmin) {
+                        IconButton(
+                            onClick = { showAddTrainerDialog = true },
+                            modifier = Modifier.testTag("admin_add_trainer_topbar_btn")
+                        ) {
+                            Icon(Icons.Default.PersonAdd, contentDescription = "Add Trainer", tint = Color.White)
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = SaffronPrimary,
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
             )
+        },
+        floatingActionButton = {
+            if (isAdmin) {
+                ExtendedFloatingActionButton(
+                    onClick = { showAddTrainerDialog = true },
+                    containerColor = SaffronPrimary,
+                    contentColor = Color.White,
+                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                    text = { Text("नया प्रशिक्षक जोड़ें", fontWeight = FontWeight.Bold) },
+                    modifier = Modifier.testTag("admin_add_trainer_fab")
+                )
+            }
         },
         modifier = modifier
     ) { padding ->
@@ -437,12 +473,63 @@ fun TrainersScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            // Header Info Card
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(SaffronPrimary.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.SportsScore, contentDescription = null, tint = SaffronPrimary, modifier = Modifier.size(28.dp))
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("जय बजरंग अखाड़ा प्रशिक्षक दल", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "मौरिकला गुफा अखाड़े में संचालक देव कुमार निषाद एवं अधिकृत प्रशिक्षकों द्वारा युवाओं को ग्राउंड पर प्रत्यक्ष मार्गदर्शन दिया जाता है।",
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        if (isAdmin) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Surface(
+                                color = OliveTertiary.copy(alpha = 0.12f),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(
+                                    text = "व्यवस्थापक मोड: आप नए प्रशिक्षक जोड़ सकते हैं एवं हटा सकते हैं",
+                                    fontSize = 11.sp,
+                                    color = OliveTertiary,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             if (trainers.isEmpty()) {
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
                     ) {
                         Column(
                             modifier = Modifier
@@ -450,16 +537,27 @@ fun TrainersScreen(
                                 .padding(24.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Icon(Icons.Default.SportsScore, contentDescription = null, tint = SaffronPrimary, modifier = Modifier.size(48.dp))
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Text("प्रशिक्षकों की जानकारी", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Icon(Icons.Default.GroupOff, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(40.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("वर्तमान में कोई अन्य प्रशिक्षक दर्ज नहीं है", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                             Text(
-                                "मौरिकला गुफा अखाड़े के मुख्य प्रशिक्षक व उस्ताद द्वारा युवाओं को ग्राउंड पर प्रत्यक्ष मार्गदर्शन दिया जाता है।",
-                                textAlign = TextAlign.Center,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                "व्यवस्थापक (Admin) ऊपर + बटन दबाकर नए प्रशिक्षक जोड़ सकते हैं।",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
                             )
+                            if (isAdmin) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Button(
+                                    onClick = { showAddTrainerDialog = true },
+                                    colors = ButtonDefaults.buttonColors(containerColor = SaffronPrimary),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("प्रशिक्षक जोड़ें")
+                                }
+                            }
                         }
                     }
                 }
@@ -468,7 +566,8 @@ fun TrainersScreen(
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
                         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
                             if (trainer.photoUri.isNotBlank()) {
@@ -496,7 +595,26 @@ fun TrainersScreen(
                             Spacer(modifier = Modifier.width(14.dp))
 
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(trainer.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(trainer.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                    if (isAdmin) {
+                                        IconButton(
+                                            onClick = { trainerToDelete = trainer },
+                                            modifier = Modifier.size(32.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.DeleteOutline,
+                                                contentDescription = "Delete Trainer",
+                                                tint = Color(0xFFDC2626)
+                                            )
+                                        }
+                                    }
+                                }
+
                                 if (trainer.serviceBackground.isNotBlank()) {
                                     Text(trainer.serviceBackground, fontSize = 12.sp, color = SaffronDark, fontWeight = FontWeight.SemiBold)
                                 }
@@ -517,6 +635,167 @@ fun TrainersScreen(
                 }
             }
         }
+    }
+
+    // Add Trainer Dialog for Admin
+    if (showAddTrainerDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showAddTrainerDialog = false
+                formError = null
+            },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.PersonAdd, contentDescription = null, tint = SaffronPrimary)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("नया प्रशिक्षक जोड़ें", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedTextField(
+                        value = newTrainerName,
+                        onValueChange = {
+                            newTrainerName = it
+                            formError = null
+                        },
+                        label = { Text("प्रशिक्षक का नाम (Full Name) *") },
+                        placeholder = { Text("उदा. कमलेश कुमार साहू") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = newTrainerBackground,
+                        onValueChange = { newTrainerBackground = it },
+                        label = { Text("सेवा पृष्ठभूमि / पद (Service Background)") },
+                        placeholder = { Text("उदा. ITBP जवान / एथलेटिक्स कोच") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = newTrainerSpecialization,
+                        onValueChange = { newTrainerSpecialization = it },
+                        label = { Text("विशेषज्ञता (Specialization)") },
+                        placeholder = { Text("उदा. 1600m रनिंग, बीम, पुश-अप्स") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = newTrainerExperience,
+                        onValueChange = { newTrainerExperience = it },
+                        label = { Text("अनुभव (Experience)") },
+                        placeholder = { Text("उदा. 5+ वर्ष") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = newTrainerIntro,
+                        onValueChange = { newTrainerIntro = it },
+                        label = { Text("परिचय / संदेश (Introduction)") },
+                        placeholder = { Text("उदा. युवाओं को सेना व पुलिस भर्ती की तैयारी कराना") },
+                        maxLines = 3,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+
+                    if (formError != null) {
+                        Text(
+                            text = formError ?: "",
+                            color = Color(0xFFDC2626),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val name = newTrainerName.trim()
+                        if (name.isBlank()) {
+                            formError = "कृपया प्रशिक्षक का नाम दर्ज करें!"
+                            return@Button
+                        }
+                        val newTrainer = Trainer(
+                            name = name,
+                            serviceBackground = newTrainerBackground.trim(),
+                            specialization = newTrainerSpecialization.trim(),
+                            experience = newTrainerExperience.trim(),
+                            introduction = newTrainerIntro.trim(),
+                            displayOrder = trainers.size + 1
+                        )
+                        onAddTrainer(newTrainer)
+                        // Reset form
+                        newTrainerName = ""
+                        newTrainerBackground = ""
+                        newTrainerSpecialization = ""
+                        newTrainerExperience = ""
+                        newTrainerIntro = ""
+                        formError = null
+                        showAddTrainerDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = SaffronPrimary),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("सुरक्षित करें (Save)")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showAddTrainerDialog = false
+                    formError = null
+                }) {
+                    Text("रद्द करें")
+                }
+            }
+        )
+    }
+
+    // Delete Trainer Confirmation Dialog
+    trainerToDelete?.let { trainer ->
+        AlertDialog(
+            onDismissRequest = { trainerToDelete = null },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFDC2626))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("प्रशिक्षक हटाएं?", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Text("क्या आप वाकई प्रशिक्षक '${trainer.name}' को अखाड़ा सूची से हटाना चाहते हैं?")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeleteTrainer(trainer)
+                        trainerToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626)),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("हां, हटाएं (Delete)")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { trainerToDelete = null }) {
+                    Text("रद्द करें")
+                }
+            }
+        )
     }
 }
 

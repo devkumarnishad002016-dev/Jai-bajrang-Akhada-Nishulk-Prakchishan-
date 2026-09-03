@@ -1,12 +1,19 @@
 package com.example
 
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import com.example.data.model.AttendanceRecord
 import com.example.data.model.StudentProfile
 import com.example.util.AdminSecurityManager
 import com.example.util.ProfileUtils
 import org.junit.Assert.*
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [36])
 class AkhadaFunctionalAuditTest {
 
     @Test
@@ -203,5 +210,61 @@ class AkhadaFunctionalAuditTest {
         assertNotEquals(studentA.fullName, studentB.fullName)
         assertNotEquals(studentA.village, studentB.village)
         assertNotEquals(studentA.overallScore, studentB.overallScore)
+    }
+
+    @Test
+    fun `test Dev Kumar Nishad Cryptographic Hash Authentication`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        // Correct Password and PIN must evaluate to true via cryptographic hash
+        assertTrue(
+            AdminSecurityManager.verifyAdminCredentials(
+                context = context,
+                idOrPin = "DEV98ADMIN",
+                passwordOrPin = "Dev@2312"
+            )
+        )
+        assertTrue(
+            AdminSecurityManager.verifyAdminCredentials(
+                context = context,
+                idOrPin = "6264059722",
+                passwordOrPin = "231298"
+            )
+        )
+        assertTrue(
+            AdminSecurityManager.verifyAdminPin(
+                context = context,
+                inputPin = "231298"
+            )
+        )
+
+        // Wrong password / PIN must be rejected
+        assertFalse(
+            AdminSecurityManager.verifyAdminCredentials(
+                context = context,
+                idOrPin = "DEV98ADMIN",
+                passwordOrPin = "WrongPassword123"
+            )
+        )
+        assertFalse(
+            AdminSecurityManager.verifyAdminPin(
+                context = context,
+                inputPin = "000000"
+            )
+        )
+    }
+
+    @Test
+    fun `test Initial State Has Zero Fake Attendance and Fake Exam Attempts`() {
+        val sampleAttendance = com.example.data.db.DemoDataGenerator.getSampleAttendance()
+        val sampleWorkouts = com.example.data.db.DemoDataGenerator.getSampleWorkoutRecords()
+        val sampleStudyAttempts = com.example.data.db.DemoDataGenerator.getSampleStudyAttempts()
+        val sampleTestAttempts = com.example.data.db.DemoDataGenerator.getSampleTestAttempts()
+        val sampleRaceResults = com.example.data.db.DemoDataGenerator.getSampleRaceResults()
+
+        assertTrue("Attendance must be empty initially (zero fake attendance)", sampleAttendance.isEmpty())
+        assertTrue("Workouts must be empty initially (zero fake workouts)", sampleWorkouts.isEmpty())
+        assertTrue("Study attempts must be empty initially", sampleStudyAttempts.isEmpty())
+        assertTrue("Test attempts must be empty initially (zero fake scores)", sampleTestAttempts.isEmpty())
+        assertTrue("Race results must be empty initially", sampleRaceResults.isEmpty())
     }
 }

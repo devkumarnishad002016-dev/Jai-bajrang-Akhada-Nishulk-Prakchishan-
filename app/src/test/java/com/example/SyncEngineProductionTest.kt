@@ -38,13 +38,13 @@ class SyncEngineProductionTest {
             students.add(student)
             return 1L
         }
-        override suspend fun insertStudents(list: List<StudentProfile>) {
-            list.forEach { insertStudent(it) }
+        override suspend fun insertStudents(students: List<StudentProfile>) {
+            students.forEach { insertStudent(it) }
         }
         override suspend fun updateStudent(student: StudentProfile) { insertStudent(student) }
         override suspend fun deleteStudent(student: StudentProfile) { students.removeAll { it.studentId == student.studentId } }
-        override suspend fun countStudentsWithMobile(mobile: String): Int = students.count { it.mobileNumber == mobile }
-        override suspend fun getStudentByMobile(mobile: String): StudentProfile? = students.find { it.mobileNumber == mobile }
+        override suspend fun countStudentsWithMobile(mobileNumber: String): Int = students.count { it.mobileNumber == mobileNumber }
+        override suspend fun getStudentByMobile(mobileNumber: String): StudentProfile? = students.find { it.mobileNumber == mobileNumber }
 
         override fun getAllAttendance(): Flow<List<AttendanceRecord>> = flowOf(attendance)
         override suspend fun getAllAttendanceDirect(): List<AttendanceRecord> = attendance.toList()
@@ -93,7 +93,7 @@ class SyncEngineProductionTest {
             notices.add(notice.copy(id = id))
             return id
         }
-        override suspend fun insertNotices(list: List<Notice>) { list.forEach { insertNotice(it) } }
+        override suspend fun insertNotices(notices: List<Notice>) { notices.forEach { insertNotice(it) } }
         override suspend fun updateNotice(notice: Notice) { insertNotice(notice) }
         override suspend fun deleteNotice(notice: Notice) { notices.removeAll { it.id == notice.id } }
 
@@ -105,7 +105,7 @@ class SyncEngineProductionTest {
             recruitment.add(info.copy(id = id))
             return id
         }
-        override suspend fun insertRecruitmentInfos(list: List<RecruitmentInfo>) { list.forEach { insertRecruitmentInfo(it) } }
+        override suspend fun insertRecruitmentInfos(infos: List<RecruitmentInfo>) { infos.forEach { insertRecruitmentInfo(it) } }
         override suspend fun updateRecruitmentInfo(info: RecruitmentInfo) { insertRecruitmentInfo(info) }
         override suspend fun deleteRecruitmentInfo(info: RecruitmentInfo) { recruitment.removeAll { it.id == info.id } }
 
@@ -119,7 +119,7 @@ class SyncEngineProductionTest {
             subjects.add(subject)
             return 1L
         }
-        override suspend fun insertSubjects(list: List<StudySubject>) { list.forEach { insertSubject(it) } }
+        override suspend fun insertSubjects(subjects: List<StudySubject>) { subjects.forEach { insertSubject(it) } }
         override suspend fun updateSubject(subject: StudySubject) { insertSubject(subject) }
         override suspend fun deleteSubject(subject: StudySubject) { subjects.removeAll { it.subjectId == subject.subjectId } }
 
@@ -134,7 +134,7 @@ class SyncEngineProductionTest {
             topics.add(topic)
             return 1L
         }
-        override suspend fun insertTopics(list: List<StudyTopic>) { list.forEach { insertTopic(it) } }
+        override suspend fun insertTopics(topics: List<StudyTopic>) { topics.forEach { insertTopic(it) } }
         override suspend fun updateTopic(topic: StudyTopic) { insertTopic(topic) }
         override suspend fun deleteTopic(topic: StudyTopic) { topics.removeAll { it.topicId == topic.topicId } }
 
@@ -156,20 +156,20 @@ class SyncEngineProductionTest {
             questions.add(question.copy(questionId = qId))
             return 1L
         }
-        override suspend fun insertQuestions(list: List<Question>) { list.forEach { insertQuestion(it) } }
+        override suspend fun insertQuestions(questions: List<Question>) { questions.forEach { insertQuestion(it) } }
         override suspend fun updateQuestion(question: Question) { insertQuestion(question) }
         override suspend fun deleteQuestion(question: Question) { questions.removeAll { it.questionId == question.questionId } }
 
         override fun getAllMockTests(): Flow<List<MockTest>> = flowOf(mockTests)
         override suspend fun getAllMockTestsDirect(): List<MockTest> = mockTests.toList()
         override fun getMockTestById(id: Long): Flow<MockTest?> = flowOf(mockTests.find { it.id == id })
-        override suspend fun insertMockTest(mockTest: MockTest): Long {
-            val id = if (mockTest.id > 0) mockTest.id else (mockTests.size + 1).toLong()
+        override suspend fun insertMockTest(test: MockTest): Long {
+            val id = if (test.id > 0) test.id else (mockTests.size + 1).toLong()
             mockTests.removeAll { it.id == id }
-            mockTests.add(mockTest.copy(id = id))
+            mockTests.add(test.copy(id = id))
             return id
         }
-        override suspend fun insertMockTests(list: List<MockTest>) { list.forEach { insertMockTest(it) } }
+        override suspend fun insertMockTests(tests: List<MockTest>) { tests.forEach { insertMockTest(it) } }
 
         // Dummy unused methods for interface completeness
         override fun getAllWorkouts(): Flow<List<WorkoutRecord>> = flowOf(emptyList())
@@ -275,8 +275,8 @@ class SyncEngineProductionTest {
             notifications.add(notification)
             return 1L
         }
-        override suspend fun insertNotifications(notificationsList: List<AppNotification>) {
-            notificationsList.forEach { insertNotification(it) }
+        override suspend fun insertNotifications(notifications: List<AppNotification>) {
+            notifications.forEach { insertNotification(it) }
         }
         override suspend fun updateNotification(notification: AppNotification) {
             insertNotification(notification)

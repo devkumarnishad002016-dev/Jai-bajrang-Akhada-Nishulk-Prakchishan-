@@ -36,6 +36,7 @@ import com.example.ui.theme.*
 fun NoticeBoardScreen(
     notices: List<Notice>,
     modifier: Modifier = Modifier,
+    onNavigateBack: (() -> Unit)? = null,
     onTogglePin: ((Notice) -> Unit)? = null,
     onMarkRead: ((Notice) -> Unit)? = null
 ) {
@@ -78,7 +79,7 @@ fun NoticeBoardScreen(
         modifier = modifier
             .fillMaxSize()
             .testTag("notice_board_screen"),
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 80.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         // Header Banner
@@ -95,7 +96,19 @@ fun NoticeBoardScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            if (onNavigateBack != null) {
+                                IconButton(
+                                    onClick = onNavigateBack,
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                                }
+                                Spacer(modifier = Modifier.width(4.dp))
+                            }
                             Box(
                                 modifier = Modifier
                                     .size(44.dp)
@@ -118,7 +131,7 @@ fun NoticeBoardScreen(
                                     fontWeight = FontWeight.ExtraBold
                                 )
                                 Text(
-                                    text = "जय बजरंग अखाड़ा, मौरिकला गुफा • आधिकारिक सूचनाएं",
+                                    text = "जय बजरंग अखाड़ा, मौरिकला गुफा",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

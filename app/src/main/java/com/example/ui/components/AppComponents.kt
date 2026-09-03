@@ -1,6 +1,7 @@
 package com.example.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -51,193 +52,181 @@ fun AppTopHeader(
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 3.dp,
-        shadowElevation = 2.dp
+        tonalElevation = 2.dp,
+        shadowElevation = 1.dp
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 10.dp)
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
+            // Left: App Logo & Name
             Row(
-                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .padding(end = 8.dp)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(SaffronPrimary, SaffronDark)
-                                )
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Shield,
-                            contentDescription = "Mission Emblem",
-                            tint = Color.White,
-                            modifier = Modifier.size(26.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = title,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(
+                            Brush.linearGradient(
+                                listOf(SaffronPrimary, SaffronDark)
                             )
-                        }
-                        Text(
-                            text = subtitle,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = SaffronPrimary,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Shield,
+                        contentDescription = "Mission Emblem",
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
 
-                // Role Switcher Chip & Student Switcher
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    // Role Toggle Pill
-                    AssistChip(
-                        onClick = {
-                            val nextRole = if (isStudent) "TRAINER" else "STUDENT"
-                            onRoleToggle(nextRole)
-                        },
-                        label = {
-                            Text(
-                                text = when {
-                                    isAdmin -> "व्यवस्थापक (Admin)"
-                                    isTrainer -> "ग्राउंड कोच (Trainer)"
-                                    else -> "छात्र (Student)"
-                                },
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = when {
-                                    isAdmin -> Icons.Default.AdminPanelSettings
-                                    isTrainer -> Icons.Default.Sports
-                                    else -> Icons.Default.Person
-                                },
-                                contentDescription = "Role Icon",
-                                modifier = Modifier.size(16.dp),
-                                tint = if (isStudent) SaffronPrimary else OliveTertiary
-                            )
-                        },
-                        colors = AssistChipDefaults.assistChipColors(
-                            containerColor = if (isStudent) SaffronContainer.copy(alpha = 0.5f) else OliveContainer.copy(alpha = 0.5f)
-                        ),
-                        border = AssistChipDefaults.assistChipBorder(
-                            enabled = true,
-                            borderColor = if (isStudent) SaffronPrimary.copy(alpha = 0.4f) else OliveTertiary.copy(alpha = 0.4f)
-                        ),
-                        modifier = Modifier.testTag("role_switcher_chip")
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Column {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
-
-                    // Student switch icon (only in student mode)
-                    if (isStudent) {
-                        IconButton(
-                            onClick = { showStudentPicker = !showStudentPicker },
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                                .testTag("switch_student_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.SwitchAccount,
-                                contentDescription = "Switch Student",
-                                modifier = Modifier.size(18.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-
-                    // Notification Hub Icon with unread badge
-                    if (onNotificationsClick != null) {
-                        BadgedBox(
-                            badge = {
-                                if (unreadNotificationsCount > 0) {
-                                    Badge(
-                                        containerColor = SaffronPrimary,
-                                        contentColor = Color.White
-                                    ) {
-                                        Text(if (unreadNotificationsCount > 9) "9+" else "$unreadNotificationsCount")
-                                    }
-                                }
-                            }
-                        ) {
-                            IconButton(
-                                onClick = onNotificationsClick,
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                                    .testTag("btn_top_notifications")
-                            ) {
-                                Icon(
-                                    imageVector = if (unreadNotificationsCount > 0) Icons.Default.NotificationsActive else Icons.Outlined.Notifications,
-                                    contentDescription = "Notifications",
-                                    modifier = Modifier.size(18.dp),
-                                    tint = if (unreadNotificationsCount > 0) SaffronPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-
-                    // Logout / Switch Account button
-                    if (onLogout != null) {
-                        IconButton(
-                            onClick = onLogout,
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                                .testTag("logout_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Logout,
-                                contentDescription = "लॉगआउट / स्विच",
-                                modifier = Modifier.size(18.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
+                    Text(
+                        text = "मौरिकला गुफा",
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                        color = SaffronPrimary,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1
+                    )
                 }
             }
 
-            // Organization subtitle line
+            // Right: Role Badge & Action Icons in single compact row
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(5.dp)
             ) {
-                Text(
-                    text = "गाँव से सेना–पुलिस भर्ती अभियान • मौरिकला गुफा",
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                // Role Toggle Pill
+                Surface(
+                    onClick = {
+                        val nextRole = if (isStudent) "TRAINER" else "STUDENT"
+                        onRoleToggle(nextRole)
+                    },
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (isStudent) SaffronContainer.copy(alpha = 0.6f) else OliveContainer.copy(alpha = 0.6f),
+                    border = BorderStroke(1.dp, if (isStudent) SaffronPrimary.copy(alpha = 0.4f) else OliveTertiary.copy(alpha = 0.4f)),
+                    modifier = Modifier.testTag("role_switcher_chip")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = when {
+                                isAdmin -> Icons.Default.AdminPanelSettings
+                                isTrainer -> Icons.Default.Sports
+                                else -> Icons.Default.Person
+                            },
+                            contentDescription = "Role Icon",
+                            modifier = Modifier.size(13.dp),
+                            tint = if (isStudent) SaffronDark else OliveTertiary
+                        )
+                        Text(
+                            text = when {
+                                isAdmin -> "Admin"
+                                isTrainer -> "कोच"
+                                else -> "छात्र"
+                            },
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                            fontWeight = FontWeight.Bold,
+                            color = if (isStudent) SaffronDark else OliveTertiary
+                        )
+                    }
+                }
+
+                // Student switch icon (only in student mode)
+                if (isStudent) {
+                    IconButton(
+                        onClick = { showStudentPicker = !showStudentPicker },
+                        modifier = Modifier
+                            .size(30.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
+                            .testTag("switch_student_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SwitchAccount,
+                            contentDescription = "Switch Student",
+                            modifier = Modifier.size(15.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
+                // Notification Hub Icon with unread badge
+                if (onNotificationsClick != null) {
+                    BadgedBox(
+                        badge = {
+                            if (unreadNotificationsCount > 0) {
+                                Badge(
+                                    containerColor = SaffronPrimary,
+                                    contentColor = Color.White,
+                                    modifier = Modifier.size(14.dp)
+                                ) {
+                                    Text(
+                                        text = if (unreadNotificationsCount > 9) "9+" else "$unreadNotificationsCount",
+                                        fontSize = 9.sp
+                                    )
+                                }
+                            }
+                        }
+                    ) {
+                        IconButton(
+                            onClick = onNotificationsClick,
+                            modifier = Modifier
+                                .size(30.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
+                                .testTag("btn_top_notifications")
+                        ) {
+                            Icon(
+                                imageVector = if (unreadNotificationsCount > 0) Icons.Default.NotificationsActive else Icons.Outlined.Notifications,
+                                contentDescription = "Notifications",
+                                modifier = Modifier.size(15.dp),
+                                tint = if (unreadNotificationsCount > 0) SaffronPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
+                // Logout / Switch Account button
+                if (onLogout != null) {
+                    IconButton(
+                        onClick = onLogout,
+                        modifier = Modifier
+                            .size(30.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
+                            .testTag("logout_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Logout,
+                            contentDescription = "लॉगआउट / स्विच",
+                            modifier = Modifier.size(15.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
     }
@@ -372,7 +361,7 @@ fun AppBottomNavigationBar(
                 Triple("admin_dashboard", "डैशबोर्ड", Icons.Default.Dashboard),
                 Triple("admin_attendance", "उपस्थिति", Icons.Default.FactCheck),
                 Triple("admin_workout", "ट्रेनिंग प्लान", Icons.Default.SportsScore),
-                Triple("admin_study", "स्टडी व क्विज", Icons.Default.AutoStories),
+                Triple("admin_study", "प्रश्न व स्टडी", Icons.Default.MenuBook),
                 Triple("admin_notices", "नोटिस व भर्ती", Icons.Default.Campaign)
             )
 

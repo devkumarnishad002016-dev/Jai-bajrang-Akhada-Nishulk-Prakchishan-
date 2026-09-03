@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.data.model.StudentProfile
 import com.example.ui.theme.*
+import com.example.util.AdminSecurityManager
 import com.example.util.ProfileUtils
 import kotlinx.coroutines.launch
 
@@ -93,6 +94,97 @@ fun StudentProfileScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Admin Profile Display (When logged in as Admin / Dev Kumar Nishad)
+            if (student == null) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(96.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        Brush.linearGradient(listOf(SaffronPrimary, OliveTertiary))
+                                    )
+                                    .border(3.dp, SaffronPrimary, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AdminPanelSettings,
+                                    contentDescription = "Admin Profile",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(56.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = AdminSecurityManager.ADMIN_NAME,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = AdminSecurityManager.ADMIN_ROLE,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = SaffronDark,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Surface(
+                                color = SaffronContainer,
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(
+                                    text = "व्यवस्थापक ID: ${AdminSecurityManager.ADMIN_UNIQUE_ID}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = OnSaffronContainer,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(
+                                text = "व्यवस्थापक विवरण (Admin Profile)",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            HorizontalDivider()
+                            DetailRow("ग्राम (Village)", AdminSecurityManager.ADMIN_VILLAGE)
+                            DetailRow("जन्मतिथि (DOB)", AdminSecurityManager.ADMIN_DOB)
+                            DetailRow("मोबाइल नंबर", AdminSecurityManager.ADMIN_MOBILE)
+                            DetailRow("सुरक्षा स्थिति", "गोपनीय पासवर्ड एवं पिन सुरक्षित (Encrypted)")
+                            DetailRow("संस्था", "जय बजरंग अखाड़ा, मौरिकला गुफा")
+                            DetailRow("प्रबंधन", "प्रशिक्षकों का प्रबंधन, उपस्थिति एवं परिणाम")
+                        }
+                    }
+                }
+            }
+
             // 1. Profile Top Hero Card
             item {
                 student?.let { s ->

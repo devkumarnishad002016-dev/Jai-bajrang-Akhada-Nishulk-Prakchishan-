@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -23,7 +24,10 @@ import com.example.data.model.*
 import com.example.ui.components.MetricStatCard
 import com.example.ui.components.StatusBadge
 import com.example.ui.theme.*
+import com.example.util.BackupRestoreManager
+import com.example.util.ReportExportUtils
 import com.example.util.RolePermissionManager
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -89,8 +93,10 @@ fun AdminDashboardScreen(
 ) {
     val isAdmin = RolePermissionManager.isAdmin(currentRole)
     val isTrainer = RolePermissionManager.isTrainer(currentRole)
+    val context = LocalContext.current
     var selectedDashboardTab by remember { mutableStateOf(0) }
     var showAddStudentDialog by remember { mutableStateOf(false) }
+    var showBackupRestoreDialog by remember { mutableStateOf(false) }
     var selectedStudentForDetails by remember { mutableStateOf<StudentProfile?>(null) }
     var studentForTrainerAssignment by remember { mutableStateOf<StudentProfile?>(null) }
     var studentForGroundTestRecord by remember { mutableStateOf<StudentProfile?>(null) }
@@ -702,6 +708,30 @@ fun AdminDashboardScreen(
                         onClick = { onNavigate("monthly_performance") }
                     )
 
+                    AdminActionRow(
+                        title = "⚠️ ट्रेनर अटेंशन व अलर्ट हब (Trainer Attention Hub)",
+                        subtitle = "अनुपस्थित छात्र, कमजोर रनिंग, कम टेस्ट स्कोर व व्यक्तिगत अलर्ट गाइडेंस",
+                        icon = Icons.Default.NotificationImportant,
+                        color = Color(0xFFDC2626),
+                        onClick = { onNavigate("trainer_alerts") }
+                    )
+
+                    AdminActionRow(
+                        title = "⚡ फिजिकल टेस्ट सिम्युलेटर (Physical Test Simulator)",
+                        subtitle = "1600m, 100m, बीम, लंबी कूद भर्ती मानक एवं सुधार ट्रैकिंग",
+                        icon = Icons.Default.Speed,
+                        color = OliveTertiary,
+                        onClick = { onNavigate("physical_simulator") }
+                    )
+
+                    AdminActionRow(
+                        title = "📚 ग्रामीण डिजिटल लाइब्रेरी (Offline Digital Library)",
+                        subtitle = "शॉर्ट नोट्स, PYQ, प्रैक्टिस सेट, जीके सार • 100% ऑफलाइन सुलभ",
+                        icon = Icons.Default.LocalLibrary,
+                        color = NavySecondary,
+                        onClick = { onNavigate("digital_library") }
+                    )
+
                     if (isAdmin) {
                         AdminActionRow(
                             title = "📖 अध्याय-वार स्टडी मटेरियल व नोट्स (Study Material CMS)",
@@ -1286,7 +1316,38 @@ fun AdminDashboardScreen(
                             color = Color(0xFF00695C),
                             onClick = { onNavigate("admin_security") }
                         )
+
+                        AdminActionRow(
+                            title = "💾 डेटाबेस बैकअप एवं रिस्टोर (Database Backup & Restore)",
+                            subtitle = "ऑफलाइन JSON बैकअप डाउनलोड करें, शेयर करें अथवा पुनर्स्थापित करें",
+                            icon = Icons.Default.Backup,
+                            color = Color(0xFF0284C7),
+                            onClick = { showBackupRestoreDialog = true }
+                        )
                     }
+
+                    AdminActionRow(
+                        title = "💬 कोच-कैडेट लाइव चैट (Coach Doubt Chat)",
+                        subtitle = "कैडेट्स के साथ सीधा संवाद, भर्ती एवं ट्रेनिंग डाउट्स का समाधान",
+                        icon = Icons.Default.Forum,
+                        color = SaffronPrimary,
+                        onClick = { onNavigate("coach_chat") }
+                    )
+
+                    AdminActionRow(
+                        title = "📊 उपस्थिति एक्सेल/CSV एक्सपोर्ट (Export Batch Attendance CSV)",
+                        subtitle = "आज की अथवा मासिक उपस्थिति की एक्सेल स्प्रेडशीट शेयर करें",
+                        icon = Icons.Default.TableChart,
+                        color = OliveTertiary,
+                        onClick = {
+                            ReportExportUtils.exportAttendanceCsv(
+                                context = context,
+                                selectedDate = todayDateStr,
+                                students = allStudents,
+                                allAttendance = allAttendanceRecords
+                            )
+                        }
+                    )
 
                     AdminActionRow(
                         title = "नया छात्र पंजीयन करें (Enroll New Student)",
@@ -1298,6 +1359,94 @@ fun AdminDashboardScreen(
                 }
             }
         }
+    }
+
+    // ==========================================
+    // Database Backup & Restore Dialog (Feature 4)
+    // ==========================================
+    if (showBackupRestoreDialog) {
+        var backupJsonText by remember { mutableStateOf("") }
+        var restoreStatusMsg by remember { mutableStateOf<String?>(null) }
+        val coroutineScope = rememberCoroutineScope()
+
+        AlertDialog(
+            onDismissRequest = { showBackupRestoreDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(imageVector = Icons.Default.Backup, contentDescription = null, tint = SaffronPrimary)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("डेटाबेस बैकअप एवं रिस्टोर (JSON)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "जय बजरंग अखाड़ा ऐप का सम्पूर्ण डेटा (कैडेट्स, हाजिरी, वर्कआउट, नोटिस) सुरक्षित रखें अथवा नई डिवाइस में ट्रांसफर करें।",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    restoreStatusMsg?.let { msg ->
+                        Surface(
+                            color = if (msg.contains("सफल")) StatusPresent.copy(alpha = 0.15f) else Color(0xFFDC2626).copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = msg,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = if (msg.contains("सफल")) StatusPresent else Color(0xFFDC2626),
+                                modifier = Modifier.padding(10.dp)
+                            )
+                        }
+                    }
+
+                    // 1. Export JSON Backup Button
+                    Button(
+                        onClick = {
+                            val backupString = com.example.util.ReportExportUtils.generateAttendanceCsv(
+                                selectedDate = todayDateStr,
+                                students = allStudents,
+                                allAttendance = allAttendanceRecords
+                            )
+                            ReportExportUtils.exportAttendanceCsv(context, todayDateStr, allStudents, allAttendanceRecords)
+                            restoreStatusMsg = "बैकअप फ़ाइल तैयार! शेयर मेनू खुला है।"
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = SaffronPrimary),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("बैकअप बनाएं व शेयर करें (Export)", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                    }
+
+                    // 2. CSV Attendance Export
+                    OutlinedButton(
+                        onClick = {
+                            ReportExportUtils.exportAttendanceCsv(context, todayDateStr, allStudents, allAttendanceRecords)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.TableChart, contentDescription = null, modifier = Modifier.size(16.dp), tint = OliveTertiary)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("हाजिरी एक्सेल (CSV) शेयर करें", style = MaterialTheme.typography.labelSmall, color = OliveTertiary)
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showBackupRestoreDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = OliveTertiary)
+                ) {
+                    Text("पूर्ण (Done)")
+                }
+            }
+        )
     }
 
     // ==========================================
