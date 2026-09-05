@@ -362,6 +362,15 @@ interface AppDao {
     @Query("SELECT * FROM trainers ORDER BY displayOrder ASC, id ASC")
     fun getAllTrainers(): Flow<List<Trainer>>
 
+    @Query("SELECT * FROM trainers ORDER BY displayOrder ASC, id ASC")
+    suspend fun getAllTrainersDirect(): List<Trainer>
+
+    @Query("SELECT * FROM trainers WHERE coachId = :coachId LIMIT 1")
+    suspend fun getTrainerByCoachId(coachId: String): Trainer?
+
+    @Query("SELECT * FROM trainers WHERE coachId = :coachId LIMIT 1")
+    fun getTrainerByCoachIdFlow(coachId: String): Flow<Trainer?>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTrainer(trainer: Trainer): Long
 

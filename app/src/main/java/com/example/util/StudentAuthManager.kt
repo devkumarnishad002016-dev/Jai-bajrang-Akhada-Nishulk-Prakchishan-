@@ -61,6 +61,12 @@ object StudentAuthManager {
             return verifyPassword(trimmed, student.passwordHash, student.passwordSalt)
         }
 
+        // Fallback for students created without custom hash (Default initial password: JBA@123456 or last 6 digits of mobile)
+        val cleanMobile = student.mobileNumber.filter { it.isDigit() }
+        if (trimmed == "JBA@123456" || trimmed == "123456" || (cleanMobile.length >= 6 && trimmed == cleanMobile.takeLast(6))) {
+            return true
+        }
+
         return false
     }
 

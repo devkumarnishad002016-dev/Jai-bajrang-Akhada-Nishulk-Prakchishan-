@@ -48,12 +48,17 @@ data class CloudUserProfile(
     val phoneNumber: String = "",
     val role: String = FirestoreConstants.ROLE_STUDENT,
     val linkedStudentId: String = "",
+    val coachId: String = "",
+    val name: String = "",
+    val achievement: String = "",
+    val active: Boolean = true,
+    val forcePasswordChange: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
     val lastLoginAt: Long = System.currentTimeMillis(),
     val isActive: Boolean = true
 ) {
     fun toMap(): Map<String, Any?> {
-        return mapOf(
+        val map = mutableMapOf<String, Any?>(
             "uid" to uid,
             "email" to email,
             "displayName" to displayName,
@@ -62,22 +67,42 @@ data class CloudUserProfile(
             "linkedStudentId" to linkedStudentId,
             "createdAt" to createdAt,
             "lastLoginAt" to lastLoginAt,
-            "isActive" to isActive
+            "isActive" to (isActive && active),
+            "active" to (active && isActive),
+            "forcePasswordChange" to forcePasswordChange
         )
+        if (coachId.isNotBlank()) {
+            map["coachId"] = coachId
+        }
+        if (name.isNotBlank() || displayName.isNotBlank()) {
+            map["name"] = if (name.isNotBlank()) name else displayName
+        }
+        if (achievement.isNotBlank()) {
+            map["achievement"] = achievement
+        }
+        return map
     }
 
     companion object {
         fun fromMap(map: Map<String, Any?>): CloudUserProfile {
+            val nameVal = map["name"] as? String ?: ""
+            val dispName = map["displayName"] as? String ?: nameVal
+            val activeVal = (map["active"] as? Boolean) ?: (map["isActive"] as? Boolean) ?: true
             return CloudUserProfile(
                 uid = map["uid"] as? String ?: "",
                 email = map["email"] as? String ?: "",
-                displayName = map["displayName"] as? String ?: "",
+                displayName = dispName,
+                name = if (nameVal.isNotBlank()) nameVal else dispName,
                 phoneNumber = map["phoneNumber"] as? String ?: "",
                 role = map["role"] as? String ?: FirestoreConstants.ROLE_STUDENT,
                 linkedStudentId = map["linkedStudentId"] as? String ?: "",
+                coachId = map["coachId"] as? String ?: "",
+                achievement = map["achievement"] as? String ?: "",
+                active = activeVal,
+                forcePasswordChange = map["forcePasswordChange"] as? Boolean ?: false,
                 createdAt = (map["createdAt"] as? Number)?.toLong() ?: System.currentTimeMillis(),
                 lastLoginAt = (map["lastLoginAt"] as? Number)?.toLong() ?: System.currentTimeMillis(),
-                isActive = map["isActive"] as? Boolean ?: true
+                isActive = activeVal
             )
         }
     }

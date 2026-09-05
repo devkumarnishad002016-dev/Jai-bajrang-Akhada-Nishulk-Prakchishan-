@@ -254,127 +254,79 @@ fun LoginScreen(
                         modifier = Modifier.padding(20.dp),
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        // Sub-Tab Switcher: Student ID vs Phone OTP
-                        TabRow(
-                            selectedTabIndex = studentLoginMode,
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                            contentColor = SaffronPrimary,
-                            modifier = Modifier.clip(RoundedCornerShape(10.dp))
-                        ) {
-                            Tab(
-                                selected = studentLoginMode == 0,
-                                onClick = {
-                                    studentLoginMode = 0
-                                    errorMessage = null
-                                },
-                                text = { Text("स्टूडेंट आईडी लॉगिन", fontSize = 13.sp, fontWeight = if (studentLoginMode == 0) FontWeight.Bold else FontWeight.Normal) },
-                                modifier = Modifier.testTag("tab_student_id_mode")
-                            )
-                            Tab(
-                                selected = studentLoginMode == 1,
-                                onClick = {
-                                    studentLoginMode = 1
-                                    errorMessage = null
-                                },
-                                text = { Text("📱 फोन OTP लॉगिन", fontSize = 13.sp, fontWeight = if (studentLoginMode == 1) FontWeight.Bold else FontWeight.Normal) },
-                                modifier = Modifier.testTag("tab_student_phone_mode")
-                            )
-                        }
+                        // --- STUDENT ID & PASSWORD LOGIN ---
+                        Text(
+                            text = "छात्र आईडी / मोबाइल द्वारा सुरक्षित लॉगिन (Student Login)",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
 
-                        if (studentLoginMode == 0) {
-                            // --- ID LOGIN MODE ---
-                            Text(
-                                text = "छात्र आईडी द्वारा सुरक्षित लॉगिन (Student Login)",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold
-                            )
+                        OutlinedTextField(
+                            value = studentIdInput,
+                            onValueChange = {
+                                studentIdInput = it
+                                errorMessage = null
+                            },
+                            label = { Text("पंजीयन संख्या / मोबाइल (Student ID / Mobile) *") },
+                            placeholder = { Text("उदा. JBA-2026-001 या 9826100001") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Badge,
+                                    contentDescription = null,
+                                    tint = SaffronPrimary
+                                )
+                            },
+                            trailingIcon = {
+                                if (studentIdInput.isNotEmpty()) {
+                                    IconButton(onClick = { studentIdInput = "" }) {
+                                        Icon(Icons.Default.Clear, contentDescription = "Clear")
+                                    }
+                                }
+                            },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Text,
+                                imeAction = ImeAction.Next
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("student_id_input"),
+                            shape = RoundedCornerShape(12.dp)
+                        )
 
-                            OutlinedTextField(
-                                value = studentIdInput,
-                                onValueChange = {
-                                    studentIdInput = it
-                                    errorMessage = null
-                                },
-                                label = { Text("पंजीयन संख्या (उदा. JBA-2026-001)") },
-                                placeholder = { Text("JBA-2026-001") },
-                                leadingIcon = {
+                        OutlinedTextField(
+                            value = studentPasswordInput,
+                            onValueChange = {
+                                studentPasswordInput = it
+                                errorMessage = null
+                            },
+                            label = { Text("छात्र पासवर्ड (Password) *") },
+                            placeholder = { Text("अपना पासवर्ड दर्ज करें (डिफ़ॉल्ट: Student@123)") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = null,
+                                    tint = SaffronPrimary
+                                )
+                            },
+                            trailingIcon = {
+                                IconButton(onClick = { showStudentPassword = !showStudentPassword }) {
                                     Icon(
-                                        imageVector = Icons.Default.Badge,
-                                        contentDescription = null,
-                                        tint = SaffronPrimary
+                                        imageVector = if (showStudentPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                        contentDescription = "Toggle password visibility"
                                     )
-                                },
-                                trailingIcon = {
-                                    if (studentIdInput.isNotEmpty()) {
-                                        IconButton(onClick = { studentIdInput = "" }) {
-                                            Icon(Icons.Default.Clear, contentDescription = "Clear")
-                                        }
-                                    }
-                                },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(
-                                    keyboardType = KeyboardType.Text,
-                                    imeAction = ImeAction.Next
-                                ),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("student_id_input"),
-                                shape = RoundedCornerShape(12.dp)
-                            )
-
-                            OutlinedTextField(
-                                value = studentPasswordInput,
-                                onValueChange = {
-                                    studentPasswordInput = it
-                                    errorMessage = null
-                                },
-                                label = { Text("छात्र पासवर्ड (Password) *") },
-                                placeholder = { Text("अपना पासवर्ड दर्ज करें") },
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Default.Lock,
-                                        contentDescription = null,
-                                        tint = SaffronPrimary
-                                    )
-                                },
-                                trailingIcon = {
-                                    IconButton(onClick = { showStudentPassword = !showStudentPassword }) {
-                                        Icon(
-                                            imageVector = if (showStudentPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                            contentDescription = "Toggle password visibility"
-                                        )
-                                    }
-                                },
-                                visualTransformation = if (showStudentPassword) VisualTransformation.None else PasswordVisualTransformation(),
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(
-                                    keyboardType = KeyboardType.Password,
-                                    imeAction = ImeAction.Done
-                                ),
-                                keyboardActions = KeyboardActions(
-                                    onDone = {
-                                        if (studentIdInput.isBlank()) {
-                                            errorMessage = "कृपया अपनी स्टूडेंट आईडी दर्ज करें।"
-                                        } else if (studentPasswordInput.isBlank()) {
-                                            errorMessage = "कृपया अपना पासवर्ड दर्ज करें।"
-                                        } else {
-                                            val success = onStudentLogin(studentIdInput, studentPasswordInput)
-                                            if (!success) {
-                                                errorMessage = "पंजीयन आईडी या पासवर्ड अमान्य है! कृपया सही विवरण दर्ज करें।"
-                                            }
-                                        }
-                                    }
-                                ),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("student_password_input"),
-                                shape = RoundedCornerShape(12.dp)
-                            )
-
-                            Button(
-                                onClick = {
+                                }
+                            },
+                            visualTransformation = if (showStudentPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Password,
+                                imeAction = ImeAction.Done
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onDone = {
                                     if (studentIdInput.isBlank()) {
-                                        errorMessage = "कृपया अपनी स्टूडेंट आईडी दर्ज करें।"
+                                        errorMessage = "कृपया अपनी स्टूडेंट आईडी या मोबाइल नंबर दर्ज करें।"
                                     } else if (studentPasswordInput.isBlank()) {
                                         errorMessage = "कृपया अपना पासवर्ड दर्ज करें।"
                                     } else {
@@ -383,190 +335,37 @@ fun LoginScreen(
                                             errorMessage = "पंजीयन आईडी या पासवर्ड अमान्य है! कृपया सही विवरण दर्ज करें।"
                                         }
                                     }
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = SaffronPrimary),
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(50.dp)
-                                    .testTag("student_login_button")
-                            ) {
-                                Icon(Icons.Default.Login, contentDescription = null)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("प्रवेश करें (Secure Login)", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            }
-                        } else {
-                            // --- REAL FIREBASE PHONE OTP MODE ---
-                            Text(
-                                text = "मोबाइल फोन OTP सत्यापन (Firebase Phone Auth)",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold
-                            )
+                                }
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("student_password_input"),
+                            shape = RoundedCornerShape(12.dp)
+                        )
 
-                            OutlinedTextField(
-                                value = phoneNumberInput,
-                                onValueChange = {
-                                    phoneNumberInput = it
-                                    errorMessage = null
-                                },
-                                label = { Text("10 अंकों का मोबाइल नंबर (+91)") },
-                                placeholder = { Text("9876543210") },
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Default.PhoneAndroid,
-                                        contentDescription = null,
-                                        tint = SaffronPrimary
-                                    )
-                                },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("phone_number_input"),
-                                shape = RoundedCornerShape(12.dp),
-                                enabled = !isOtpSent
-                            )
-
-                            if (!isOtpSent) {
-                                Button(
-                                    onClick = {
-                                        val clean = phoneNumberInput.trim().replace(" ", "").replace("-", "")
-                                        if (clean.length < 10) {
-                                            errorMessage = "कृपया वैध 10-अंकीय मोबाइल नंबर दर्ज करें।"
-                                            return@Button
-                                        }
-                                        val act = context as? android.app.Activity
-                                        if (act == null || onSendPhoneOtp == null) {
-                                            errorMessage = "फोन प्रमाणीकरण सेवा उपलब्ध नहीं है।"
-                                            return@Button
-                                        }
-                                        isSendingOtp = true
-                                        onSendPhoneOtp(
-                                            act,
-                                            clean,
-                                            { vId ->
-                                                isSendingOtp = false
-                                                phoneVerificationId = vId
-                                                isOtpSent = true
-                                                successMessage = "OTP एसएमएस कोड आपके नंबर पर भेजा गया है।"
-                                            },
-                                            {
-                                                isSendingOtp = false
-                                                successMessage = "ऑटो-सत्यापन सफल! लॉगिन हो रहा है..."
-                                            },
-                                            { err ->
-                                                isSendingOtp = false
-                                                errorMessage = err
-                                            }
-                                        )
-                                    },
-                                    enabled = !isSendingOtp,
-                                    colors = ButtonDefaults.buttonColors(containerColor = SaffronPrimary),
-                                    shape = RoundedCornerShape(12.dp),
-                                    modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(50.dp)
-                                    .testTag("btn_send_otp")
-                                ) {
-                                    if (isSendingOtp) {
-                                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text("OTP भेजा जा रहा है...", fontWeight = FontWeight.Bold)
-                                    } else {
-                                        Icon(Icons.Default.Sms, contentDescription = null)
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text("SMS द्वारा OTP कोड प्राप्त करें", fontWeight = FontWeight.Bold)
+                        Button(
+                            onClick = {
+                                if (studentIdInput.isBlank()) {
+                                    errorMessage = "कृपया अपनी स्टूडेंट आईडी या मोबाइल नंबर दर्ज करें।"
+                                } else if (studentPasswordInput.isBlank()) {
+                                    errorMessage = "कृपया अपना पासवर्ड दर्ज करें।"
+                                } else {
+                                    val success = onStudentLogin(studentIdInput, studentPasswordInput)
+                                    if (!success) {
+                                        errorMessage = "पंजीयन आईडी या पासवर्ड अमान्य है! कृपया सही विवरण दर्ज करें।"
                                     }
                                 }
-                            } else {
-                                // OTP Code Entry
-                                OutlinedTextField(
-                                    value = phoneOtpInput,
-                                    onValueChange = {
-                                        phoneOtpInput = it
-                                        errorMessage = null
-                                    },
-                                    label = { Text("6 अंकों का OTP कोड दर्ज करें") },
-                                    placeholder = { Text("123456") },
-                                    leadingIcon = {
-                                        Icon(
-                                            imageVector = Icons.Default.Lock,
-                                            contentDescription = null,
-                                            tint = OliveTertiary
-                                        )
-                                    },
-                                    singleLine = true,
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .testTag("otp_code_input"),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-
-                                Button(
-                                    onClick = {
-                                        if (phoneOtpInput.trim().length < 6) {
-                                            errorMessage = "कृपया 6 अंकों का सही OTP दर्ज करें।"
-                                            return@Button
-                                        }
-                                        val vId = phoneVerificationId
-                                        if (vId == null || onVerifyPhoneOtp == null) {
-                                            errorMessage = "सत्यापन सत्र अमान्य है। कृपया पुनः प्रयास करें।"
-                                            return@Button
-                                        }
-                                        onVerifyPhoneOtp(
-                                            vId,
-                                            phoneOtpInput.trim(),
-                                            "",
-                                            {
-                                                successMessage = "प्रमाणीकरण सफल!"
-                                            },
-                                            { err ->
-                                                errorMessage = err
-                                            }
-                                        )
-                                    },
-                                    colors = ButtonDefaults.buttonColors(containerColor = ArmyGreen),
-                                    shape = RoundedCornerShape(12.dp),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(50.dp)
-                                        .testTag("btn_verify_otp")
-                                ) {
-                                    Icon(Icons.Default.VerifiedUser, contentDescription = null)
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("OTP सत्यापित करें एवं लॉगिन करें", fontWeight = FontWeight.Bold)
-                                }
-
-                                TextButton(
-                                    onClick = {
-                                        isOtpSent = false
-                                        phoneOtpInput = ""
-                                        phoneVerificationId = null
-                                    },
-                                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                                ) {
-                                    Text("नंबर बदलें / पुनः OTP भेजें", fontSize = 13.sp)
-                                }
-                            }
-
-                            Surface(
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(Icons.Default.Security, contentDescription = null, tint = OliveTertiary, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = "सुरक्षित: वास्तविक Firebase Phone Authentication द्वारा SMS कोड। कोई मॉक या अनधिकृत OTP उपयोग नहीं होता।",
-                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = SaffronPrimary),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp)
+                                .testTag("student_login_button")
+                        ) {
+                            Icon(Icons.Default.Login, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("प्रवेश करें (Secure Login)", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         }
 
                         if (onRegisterStudent != null) {
@@ -805,6 +604,31 @@ fun LoginScreen(
                                 }
                             }
 
+                            // Security Notice
+                            Surface(
+                                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Security,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "उच्च सुरक्षा: व्यवस्थापक पैनल केवल अधिकृत ID एवं पासवर्ड (231298) से ही खुलेगा। कमजोर पिन (1234) पूर्णतः बंद है।",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
+                            }
+
                             // 1. Admin ID / Mobile Input
                             OutlinedTextField(
                                 value = adminIdInput,
@@ -812,8 +636,8 @@ fun LoginScreen(
                                     adminIdInput = it
                                     errorMessage = null
                                 },
-                                label = { Text("व्यवस्थापक ID / मोबाइल (Admin ID) *") },
-                                placeholder = { Text("अपनी अधिकृत ID दर्ज करें") },
+                                label = { Text("व्यवस्थापक ID (Admin ID) *") },
+                                placeholder = { Text("उदा. DEV98ADMIN या 6264059722") },
                                 leadingIcon = {
                                     Icon(
                                         imageVector = Icons.Default.Badge,
@@ -840,8 +664,8 @@ fun LoginScreen(
                                     adminPinInput = it
                                     errorMessage = null
                                 },
-                                label = { Text("पासवर्ड / 6-अंक पिन (Password / PIN) *") },
-                                placeholder = { Text("अपना गोपनीय पासवर्ड या पिन दर्ज करें") },
+                                label = { Text("व्यवस्थापक पासवर्ड (Password: 231298) *") },
+                                placeholder = { Text("अधिकृत पासवर्ड दर्ज करें (231298)") },
                                 leadingIcon = {
                                     Icon(
                                         imageVector = Icons.Default.Lock,
@@ -865,13 +689,25 @@ fun LoginScreen(
                                 ),
                                 keyboardActions = KeyboardActions(
                                     onDone = {
-                                        val inputPass = adminPasswordInput.ifBlank { adminPinInput }
-                                        val adminSuccess = onAdminLoginWithCredentials?.invoke(adminIdInput, inputPass)
-                                            ?: onAdminLogin(if (inputPass.isNotBlank()) inputPass else adminIdInput)
+                                        val trimmedId = adminIdInput.trim()
+                                        val trimmedPass = adminPasswordInput.trim().ifEmpty { adminPinInput.trim() }
+
+                                        if (trimmedId.isBlank() || trimmedPass.isBlank()) {
+                                            errorMessage = "व्यवस्थापक ID एवं पासवर्ड (231298) दोनों भरना अनिवार्य है!"
+                                            return@KeyboardActions
+                                        }
+
+                                        if (trimmedPass == "1234" || trimmedPass == "0000" || trimmedPass == "1111") {
+                                            errorMessage = "1234 कमजोर पासवर्ड है और बंद कर दिया गया है! केवल अधिकृत पासवर्ड (231298) से ही एडमिन पैनल खुलेगा।"
+                                            return@KeyboardActions
+                                        }
+
+                                        val adminSuccess = onAdminLoginWithCredentials?.invoke(trimmedId, trimmedPass)
+                                            ?: onAdminLogin(trimmedPass)
                                         if (!adminSuccess) {
-                                            val trainerSuccess = onTrainerLogin?.invoke(inputPass) ?: false
+                                            val trainerSuccess = onTrainerLogin?.invoke(trimmedPass) ?: false
                                             if (!trainerSuccess) {
-                                                errorMessage = "गलत क्रेडेंशियल्स! कृपया सही व्यवस्थापक ID एवं पासवर्ड दर्ज करें।"
+                                                errorMessage = "गलत क्रेडेंशियल्स! केवल अधिकृत व्यवस्थापक ID एवं पासवर्ड (231298) दर्ज करें।"
                                             }
                                         }
                                     }
@@ -885,13 +721,25 @@ fun LoginScreen(
                             // Login Button
                             Button(
                                 onClick = {
-                                    val inputPass = adminPasswordInput.ifBlank { adminPinInput }
-                                    val adminSuccess = onAdminLoginWithCredentials?.invoke(adminIdInput, inputPass)
-                                        ?: onAdminLogin(if (inputPass.isNotBlank()) inputPass else adminIdInput)
+                                    val trimmedId = adminIdInput.trim()
+                                    val trimmedPass = adminPasswordInput.trim().ifEmpty { adminPinInput.trim() }
+
+                                    if (trimmedId.isBlank() || trimmedPass.isBlank()) {
+                                        errorMessage = "व्यवस्थापक ID एवं पासवर्ड (231298) दोनों भरना अनिवार्य है!"
+                                        return@Button
+                                    }
+
+                                    if (trimmedPass == "1234" || trimmedPass == "0000" || trimmedPass == "1111") {
+                                        errorMessage = "1234 कमजोर पासवर्ड है और बंद कर दिया गया है! केवल अधिकृत पासवर्ड (231298) से ही एडमिन पैनल खुलेगा।"
+                                        return@Button
+                                    }
+
+                                    val adminSuccess = onAdminLoginWithCredentials?.invoke(trimmedId, trimmedPass)
+                                        ?: onAdminLogin(trimmedPass)
                                     if (!adminSuccess) {
-                                        val trainerSuccess = onTrainerLogin?.invoke(inputPass) ?: false
+                                        val trainerSuccess = onTrainerLogin?.invoke(trimmedPass) ?: false
                                         if (!trainerSuccess) {
-                                            errorMessage = "गलत क्रेडेंशियल्स! कृपया सही व्यवस्थापक ID एवं पासवर्ड दर्ज करें।"
+                                            errorMessage = "गलत क्रेडेंशियल्स! केवल अधिकृत व्यवस्थापक ID एवं पासवर्ड (231298) दर्ज करें।"
                                         }
                                     }
                                 },
@@ -904,7 +752,7 @@ fun LoginScreen(
                             ) {
                                 Icon(Icons.Default.AdminPanelSettings, contentDescription = null)
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("व्यवस्थापक / कोच प्रवेश (Admin Login)", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                Text("व्यवस्थापक प्रवेश (Admin Login)", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                             }
 
                             TextButton(

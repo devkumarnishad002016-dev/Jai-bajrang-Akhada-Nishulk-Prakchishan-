@@ -34,6 +34,7 @@ fun AdminContentManagementScreen(
     contactInfo: ContactInfo?,
     onAddTrainer: (Trainer) -> Unit,
     onDeleteTrainer: (Trainer) -> Unit,
+    onUpdateTrainer: (Trainer) -> Unit = {},
     onAddGalleryItem: (GalleryItem) -> Unit,
     onDeleteGalleryItem: (GalleryItem) -> Unit,
     onAddSuccessStory: (SuccessStory) -> Unit,
@@ -45,6 +46,8 @@ fun AdminContentManagementScreen(
     var selectedTab by remember { mutableIntStateOf(0) } // 0: Trainers, 1: Gallery, 2: Success Stories, 3: Contact Info
 
     var showTrainerDialog by remember { mutableStateOf(false) }
+    var trainerToEdit by remember { mutableStateOf<Trainer?>(null) }
+    var trainerToDelete by remember { mutableStateOf<Trainer?>(null) }
     var showGalleryDialog by remember { mutableStateOf(false) }
     var showStoryDialog by remember { mutableStateOf(false) }
 
@@ -137,9 +140,22 @@ fun AdminContentManagementScreen(
                                                 if (trainer.specialization.isNotBlank()) {
                                                     Text(trainer.specialization, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                                 }
+                                                if (trainer.experience.isNotBlank() || trainer.contactNumber.isNotBlank()) {
+                                                    Text(
+                                                        listOfNotNull(
+                                                            trainer.experience.takeIf { it.isNotBlank() },
+                                                            trainer.contactNumber.takeIf { it.isNotBlank() }?.let { "📞 $it" }
+                                                        ).joinToString(" • "),
+                                                        fontSize = 11.sp,
+                                                        color = OliveTertiary
+                                                    )
+                                                }
                                             }
-                                            IconButton(onClick = { onDeleteTrainer(trainer) }) {
-                                                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red.copy(alpha = 0.7f))
+                                            IconButton(onClick = { trainerToEdit = trainer }) {
+                                                Icon(Icons.Default.Edit, contentDescription = "Edit Coach", tint = SaffronPrimary)
+                                            }
+                                            IconButton(onClick = { trainerToDelete = trainer }) {
+                                                Icon(Icons.Default.Delete, contentDescription = "Delete Coach", tint = Color.Red.copy(alpha = 0.7f))
                                             }
                                         }
                                     }
@@ -221,16 +237,21 @@ fun AdminContentManagementScreen(
         var exp by remember { mutableStateOf("") }
         var spec by remember { mutableStateOf("") }
         var intro by remember { mutableStateOf("") }
+        var contact by remember { mutableStateOf("") }
 
         AlertDialog(
             onDismissRequest = { showTrainerDialog = false },
-            title = { Text("नया प्रशिक्षक जोड़ें") },
+            title = { Text("नया प्रशिक्षक / कोच जोड़ें") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("प्रशिक्षक का नाम *") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = contact, onValueChange = { contact = it }, label = { Text("मोबाइल / संपर्क नंबर") }, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(value = bg, onValueChange = { bg = it }, label = { Text("पृष्ठभूमि (उदा. पूर्व सेना / खेल प्रशिक्षक)") }, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(value = exp, onValueChange = { exp = it }, label = { Text("अनुभव (उदा. 6+ वर्ष)") }, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(value = spec, onValueChange = { spec = it }, label = { Text("विशेषज्ञता (उदा. 1600m रनिंग, बीम)") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = spec, onValueChange = { spec = it }, label = { Text("विशेषज्ञता (उदा. 1600m रनिंग, बीम, फिजिकल)") }, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(value = intro, onValueChange = { intro = it }, label = { Text("संक्षिप्त परिचय") }, modifier = Modifier.fillMaxWidth())
                 }
             },
@@ -244,7 +265,8 @@ fun AdminContentManagementScreen(
                                     serviceBackground = bg.trim(),
                                     experience = exp.trim(),
                                     specialization = spec.trim(),
-                                    introduction = intro.trim()
+                                    introduction = intro.trim(),
+                                    contactNumber = contact.trim()
                                 )
                             )
                             showTrainerDialog = false
@@ -255,6 +277,80 @@ fun AdminContentManagementScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showTrainerDialog = false }) { Text("रद्द करें") }
+            }
+        )
+    }
+
+    // Edit Trainer Dialog (Full Admin Edit Power)
+    trainerToEdit?.let { currentTrainer ->
+        var editName by remember(currentTrainer) { mutableStateOf(currentTrainer.name) }
+        var editBg by remember(currentTrainer) { mutableStateOf(currentTrainer.serviceBackground) }
+        var editExp by remember(currentTrainer) { mutableStateOf(currentTrainer.experience) }
+        var editSpec by remember(currentTrainer) { mutableStateOf(currentTrainer.specialization) }
+        var editIntro by remember(currentTrainer) { mutableStateOf(currentTrainer.introduction) }
+        var editContact by remember(currentTrainer) { mutableStateOf(currentTrainer.contactNumber) }
+
+        AlertDialog(
+            onDismissRequest = { trainerToEdit = null },
+            title = { Text("प्रशिक्षक / कोच विवरण संपादित करें (Edit Coach)") },
+            text = {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(value = editName, onValueChange = { editName = it }, label = { Text("प्रशिक्षक का नाम *") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = editContact, onValueChange = { editContact = it }, label = { Text("मोबाइल / संपर्क नंबर") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = editBg, onValueChange = { editBg = it }, label = { Text("पृष्ठभूमि (उदा. पूर्व सेना / फिटनेस कोच)") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = editExp, onValueChange = { editExp = it }, label = { Text("अनुभव (उदा. 8+ वर्ष)") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = editSpec, onValueChange = { editSpec = it }, label = { Text("विशेषज्ञता (उदा. 1600m रनिंग, पुश-अप्स)") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = editIntro, onValueChange = { editIntro = it }, label = { Text("संक्षिप्त परिचय") }, modifier = Modifier.fillMaxWidth())
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (editName.isNotBlank()) {
+                            onUpdateTrainer(
+                                currentTrainer.copy(
+                                    name = editName.trim(),
+                                    serviceBackground = editBg.trim(),
+                                    experience = editExp.trim(),
+                                    specialization = editSpec.trim(),
+                                    introduction = editIntro.trim(),
+                                    contactNumber = editContact.trim()
+                                )
+                            )
+                            trainerToEdit = null
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = SaffronPrimary)
+                ) { Text("सहेजें (Save Changes)") }
+            },
+            dismissButton = {
+                TextButton(onClick = { trainerToEdit = null }) { Text("रद्द करें") }
+            }
+        )
+    }
+
+    // Delete Trainer Confirmation Dialog
+    trainerToDelete?.let { targetTrainer ->
+        AlertDialog(
+            onDismissRequest = { trainerToDelete = null },
+            title = { Text("कोच हटाएं (Remove Coach)") },
+            text = {
+                Text("क्या आप निश्चित रूप से कोच '${targetTrainer.name}' को हटाना चाहते हैं? यह कार्यवाही वापस नहीं होगी।")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeleteTrainer(targetTrainer)
+                        trainerToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                ) { Text("हटाएं (Remove)") }
+            },
+            dismissButton = {
+                TextButton(onClick = { trainerToDelete = null }) { Text("रद्द करें") }
             }
         )
     }

@@ -1,5 +1,7 @@
 package com.example.ui.screens.profile
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -31,6 +33,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import com.example.data.model.StudentProfile
 import com.example.ui.theme.*
@@ -43,6 +46,9 @@ import kotlinx.coroutines.launch
 fun StudentProfileScreen(
     student: StudentProfile?,
     onUpdateProfile: (StudentProfile) -> Unit,
+    adminPhotoUri: String = "",
+    onUpdateAdminPhoto: (String) -> Unit = {},
+    onRemoveAdminPhoto: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -56,14 +62,45 @@ fun StudentProfileScreen(
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
     ) { bitmap: Bitmap? ->
-        if (bitmap != null && student != null) {
-            val savedUri = ProfileUtils.saveBitmapToInternalStorage(context, bitmap, student.studentId)
+        if (bitmap != null) {
+            val entityId = student?.studentId ?: AdminSecurityManager.ADMIN_UNIQUE_ID
+            val savedUri = ProfileUtils.saveBitmapToInternalStorage(context, bitmap, entityId)
             if (savedUri.isNotBlank()) {
-                val updated = student.copy(profilePhotoUri = savedUri)
-                onUpdateProfile(updated)
-                coroutineScope.launch {
-                    snackbarHostState.showSnackbar("कैमरा से फोटो सफलतापूर्वक अपडेट की गई!")
+                if (student != null) {
+                    val updated = student.copy(profilePhotoUri = savedUri)
+                    onUpdateProfile(updated)
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar("कैमरा से छात्र फोटो सफलतापूर्वक अपडेट की गई!")
+                    }
+                } else {
+                    onUpdateAdminPhoto(savedUri)
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar("कैमरा से व्यवस्थापक फोटो सफलतापूर्वक अपडेट की गई!")
+                    }
                 }
+            } else {
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("फोटो सेव करने में त्रुटि!")
+                }
+            }
+        }
+    }
+
+    // Camera permission launcher
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            try {
+                cameraLauncher.launch(null)
+            } catch (e: Exception) {
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("कैमरा खोलने में असमर्थ")
+                }
+            }
+        } else {
+            coroutineScope.launch {
+                snackbarHostState.showSnackbar("कैमरा अनुमति आवश्यक है!")
             }
         }
     }
@@ -72,12 +109,26 @@ fun StudentProfileScreen(
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        if (uri != null && student != null) {
-            val savedUri = ProfileUtils.saveUriToInternalStorage(context, uri, student.studentId)
-            val updated = student.copy(profilePhotoUri = savedUri)
-            onUpdateProfile(updated)
-            coroutineScope.launch {
-                snackbarHostState.showSnackbar("गैलरी से फोटो सफलतापूर्वक अपडेट की गई!")
+        if (uri != null) {
+            val entityId = student?.studentId ?: AdminSecurityManager.ADMIN_UNIQUE_ID
+            val savedUri = ProfileUtils.saveUriToInternalStorage(context, uri, entityId)
+            if (savedUri.isNotBlank()) {
+                if (student != null) {
+                    val updated = student.copy(profilePhotoUri = savedUri)
+                    onUpdateProfile(updated)
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar("गैलरी से छात्र फोटो सफलतापूर्वक अपडेट की गई!")
+                    }
+                } else {
+                    onUpdateAdminPhoto(savedUri)
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar("गैलरी से व्यवस्थापक फोटो सफलतापूर्वक अपडेट की गई!")
+                    }
+                }
+            } else {
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("फोटो प्रोसेस करने में त्रुटि!")
+                }
             }
         }
     }
@@ -112,19 +163,57 @@ fun StudentProfileScreen(
                             Box(
                                 modifier = Modifier
                                     .size(96.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        Brush.linearGradient(listOf(SaffronPrimary, OliveTertiary))
-                                    )
-                                    .border(3.dp, SaffronPrimary, CircleShape),
+                                    .clickable { showPhotoOptionsDialog = true }
+                                    .testTag("admin_profile_photo_avatar"),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.AdminPanelSettings,
-                                    contentDescription = "Admin Profile",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(56.dp)
-                                )
+                                if (adminPhotoUri.isNotBlank()) {
+                                    AsyncImage(
+                                        model = adminPhotoUri,
+                                        contentDescription = "व्यवस्थापक फोटो",
+                                        modifier = Modifier
+                                            .size(96.dp)
+                                            .clip(CircleShape)
+                                            .border(3.dp, SaffronPrimary, CircleShape),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(96.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                Brush.linearGradient(listOf(SaffronPrimary, OliveTertiary))
+                                            )
+                                            .border(3.dp, SaffronPrimary, CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.AdminPanelSettings,
+                                            contentDescription = "Admin Profile",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(56.dp)
+                                        )
+                                    }
+                                }
+
+                                // Camera edit icon badge
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.BottomEnd)
+                                        .size(30.dp)
+                                        .clip(CircleShape)
+                                        .background(SaffronPrimary)
+                                        .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.PhotoCamera,
+                                        contentDescription = "Change Photo",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
                             }
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
@@ -572,7 +661,7 @@ fun StudentProfileScreen(
     }
 
     // Photo selection modal dialog
-    if (showPhotoOptionsDialog && student != null) {
+    if (showPhotoOptionsDialog) {
         AlertDialog(
             onDismissRequest = { showPhotoOptionsDialog = false },
             icon = {
@@ -585,7 +674,7 @@ fun StudentProfileScreen(
             },
             title = {
                 Text(
-                    text = "प्रोफाइल फोटो बदलें",
+                    text = if (student != null) "छात्र प्रोफाइल फोटो बदलें" else "व्यवस्थापक प्रोफाइल फोटो बदलें",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -598,7 +687,21 @@ fun StudentProfileScreen(
                     Card(
                         onClick = {
                             showPhotoOptionsDialog = false
-                            cameraLauncher.launch(null)
+                            val hasCamPermission = ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.CAMERA
+                            ) == PackageManager.PERMISSION_GRANTED
+                            if (hasCamPermission) {
+                                try {
+                                    cameraLauncher.launch(null)
+                                } catch (e: Exception) {
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar("कैमरा खोलने में असमर्थ")
+                                    }
+                                }
+                            } else {
+                                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                            }
                         },
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                         shape = RoundedCornerShape(10.dp),
@@ -619,7 +722,13 @@ fun StudentProfileScreen(
                     Card(
                         onClick = {
                             showPhotoOptionsDialog = false
-                            galleryLauncher.launch("image/*")
+                            try {
+                                galleryLauncher.launch("image/*")
+                            } catch (e: Exception) {
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar("गैलरी खोलने में असमर्थ")
+                                }
+                            }
                         },
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                         shape = RoundedCornerShape(10.dp),
@@ -637,14 +746,27 @@ fun StudentProfileScreen(
                         }
                     }
 
-                    if (student.profilePhotoUri.isNotBlank()) {
+                    val hasExistingPhoto = if (student != null) {
+                        student.profilePhotoUri.isNotBlank()
+                    } else {
+                        adminPhotoUri.isNotBlank()
+                    }
+
+                    if (hasExistingPhoto) {
                         Card(
                             onClick = {
                                 showPhotoOptionsDialog = false
-                                val updated = student.copy(profilePhotoUri = "")
-                                onUpdateProfile(updated)
-                                coroutineScope.launch {
-                                    snackbarHostState.showSnackbar("फोटो हटा दी गई")
+                                if (student != null) {
+                                    val updated = student.copy(profilePhotoUri = "")
+                                    onUpdateProfile(updated)
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar("फोटो हटा दी गई")
+                                    }
+                                } else {
+                                    onRemoveAdminPhoto()
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar("व्यवस्थापक फोटो हटा दी गई")
+                                    }
                                 }
                             },
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)),

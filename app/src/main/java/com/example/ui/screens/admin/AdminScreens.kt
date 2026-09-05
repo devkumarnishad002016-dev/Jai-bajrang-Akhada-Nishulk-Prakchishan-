@@ -1,6 +1,7 @@
 package com.example.ui.screens.admin
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,11 +16,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.data.model.*
 import com.example.ui.components.MetricStatCard
 import com.example.ui.components.StatusBadge
@@ -86,6 +91,7 @@ fun AdminDashboardScreen(
     onAddStudent: (StudentProfile) -> Unit,
     modifier: Modifier = Modifier,
     currentRole: String = "ADMIN",
+    adminPhotoUri: String = "",
     cloudSyncStatus: com.example.data.cloud.CloudSyncStatus = com.example.data.cloud.CloudSyncStatus.Idle,
     onTriggerSync: () -> Unit = {},
     onAssignTrainer: (studentId: String, trainerId: String, trainerName: String, batchName: String) -> Unit = { _, _, _, _ -> },
@@ -257,19 +263,33 @@ fun AdminDashboardScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .clip(CircleShape)
-                                    .background(if (isAdmin) OliveTertiary.copy(alpha = 0.15f) else SaffronPrimary.copy(alpha = 0.15f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = if (isAdmin) Icons.Default.AdminPanelSettings else Icons.Default.Sports,
-                                    contentDescription = if (isAdmin) "Admin" else "Trainer",
-                                    tint = if (isAdmin) OliveTertiary else SaffronPrimary,
-                                    modifier = Modifier.size(24.dp)
+                            if (isAdmin && adminPhotoUri.isNotBlank()) {
+                                AsyncImage(
+                                    model = adminPhotoUri,
+                                    contentDescription = "Admin Photo",
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                        .clip(CircleShape)
+                                        .border(1.5.dp, OliveTertiary, CircleShape)
+                                        .clickable { onNavigate("profile") },
+                                    contentScale = ContentScale.Crop
                                 )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                        .clip(CircleShape)
+                                        .background(if (isAdmin) OliveTertiary.copy(alpha = 0.15f) else SaffronPrimary.copy(alpha = 0.15f))
+                                        .clickable { onNavigate("profile") },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = if (isAdmin) Icons.Default.AdminPanelSettings else Icons.Default.Sports,
+                                        contentDescription = if (isAdmin) "Admin" else "Trainer",
+                                        tint = if (isAdmin) OliveTertiary else SaffronPrimary,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
                             }
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
@@ -1302,6 +1322,14 @@ fun AdminDashboardScreen(
                         )
 
                         AdminActionRow(
+                            title = "कोच व प्रशिक्षक प्रबंधन (Manage Coaches & Trainers)",
+                            subtitle = "नए कोच जोड़ें, हटाएं अथवा कोच प्रोफाइल, विशेषता व संपर्क संपादित करें",
+                            icon = Icons.Default.Sports,
+                            color = SaffronPrimary,
+                            onClick = { onNavigate("trainers") }
+                        )
+
+                        AdminActionRow(
                             title = "अखाड़ा कंटेंट प्रबंधन (Content CMS)",
                             subtitle = "प्रशिक्षक, गैलरी फोटो, सफलता की कहानियां व संपर्क विवरण प्रबंधित करें",
                             icon = Icons.Default.EditNote,
@@ -1325,6 +1353,14 @@ fun AdminDashboardScreen(
                             onClick = { showBackupRestoreDialog = true }
                         )
                     }
+
+                    AdminActionRow(
+                        title = "⚠️ कैडेट अटेंशन व कोच अलर्ट (Cadet Attention Alerts)",
+                        subtitle = "अनुपस्थित, कमजोर रनिंग अथवा पिछड़े कैडेट्स की सूची व त्वरित सुधार मार्गदर्शन",
+                        icon = Icons.Default.WarningAmber,
+                        color = Color(0xFFDC2626),
+                        onClick = { onNavigate("trainer_alerts") }
+                    )
 
                     AdminActionRow(
                         title = "💬 कोच-कैडेट लाइव चैट (Coach Doubt Chat)",
@@ -1835,6 +1871,8 @@ fun AdminDashboardScreen(
         var pushups by remember { mutableStateOf("40") }
         var trainerName by remember { mutableStateOf("देव कुमार निषाद (मुख्य कोच)") }
         var batchName by remember { mutableStateOf("सुबह आर्मी स्पेशल बैच (Morning Army Batch)") }
+        var initialPassword by remember { mutableStateOf("JBA@123456") }
+        var showInitialPassword by remember { mutableStateOf(false) }
         var validationError by remember { mutableStateOf<String?>(null) }
 
         val calculatedAge = remember(dob) {
@@ -1888,15 +1926,45 @@ fun AdminDashboardScreen(
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Row(
-                                modifier = Modifier.padding(10.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text("स्वतः जनरेटेड स्टूडेंट आईडी:", style = MaterialTheme.typography.bodySmall, color = OnSaffronContainer)
-                                Text(nextId, fontWeight = FontWeight.ExtraBold, color = SaffronDark, style = MaterialTheme.typography.titleSmall)
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("स्वतः जनरेटेड स्टूडेंट आईडी:", style = MaterialTheme.typography.bodySmall, color = OnSaffronContainer)
+                                    Text(nextId, fontWeight = FontWeight.ExtraBold, color = SaffronDark, style = MaterialTheme.typography.titleSmall)
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "छात्र इस ID (या 10-अंक मोबाइल नंबर) और नीचे दिए गए पासवर्ड से लॉगिन कर सकेंगे।",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = OnSaffronContainer.copy(alpha = 0.8f)
+                                )
                             }
                         }
+                    }
+
+                    // Initial Password Field
+                    item {
+                        OutlinedTextField(
+                            value = initialPassword,
+                            onValueChange = { initialPassword = it },
+                            label = { Text("छात्र लॉगिन पासवर्ड (Default: JBA@123456) *") },
+                            placeholder = { Text("पासवर्ड दर्ज करें (उदा. JBA@123456)") },
+                            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = SaffronPrimary) },
+                            trailingIcon = {
+                                IconButton(onClick = { showInitialPassword = !showInitialPassword }) {
+                                    Icon(
+                                        imageVector = if (showInitialPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                        contentDescription = "Toggle password"
+                                    )
+                                }
+                            },
+                            visualTransformation = if (showInitialPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
 
                     item { OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("पूरा नाम (Full Name) *") }, modifier = Modifier.fillMaxWidth()) }
@@ -1966,6 +2034,8 @@ fun AdminDashboardScreen(
                         } else if (allStudents.any { it.mobileNumber.trim().filter { c -> c.isDigit() } == cleanMobile }) {
                             validationError = "यह मोबाइल नंबर ($cleanMobile) पहले से पंजीकृत है! कृपया दूसरा नंबर दर्ज करें।"
                         } else {
+                            val pass = initialPassword.trim().ifEmpty { "JBA@123456" }
+                            val (hash, salt) = com.example.util.StudentAuthManager.createPasswordCredentials(pass)
                             val newStudent = StudentProfile(
                                 studentId = nextId,
                                 fullName = name.trim(),
@@ -1997,7 +2067,9 @@ fun AdminDashboardScreen(
                                 studyTargetPercentage = 0,
                                 overallScore = 80,
                                 assignedTrainerName = trainerName.trim().ifEmpty { "देव कुमार निषाद (मुख्य कोच)" },
-                                batchName = batchName.trim().ifEmpty { "सुबह आर्मी स्पेशल बैच (Morning Army Batch)" }
+                                batchName = batchName.trim().ifEmpty { "सुबह आर्मी स्पेशल बैच (Morning Army Batch)" },
+                                passwordHash = hash,
+                                passwordSalt = salt
                             )
                             onAddStudent(newStudent)
                             showAddStudentDialog = false

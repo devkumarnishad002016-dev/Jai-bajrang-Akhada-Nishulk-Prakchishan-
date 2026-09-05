@@ -413,10 +413,12 @@ fun TrainersScreen(
     modifier: Modifier = Modifier,
     isAdmin: Boolean = false,
     onAddTrainer: (Trainer) -> Unit = {},
-    onDeleteTrainer: (Trainer) -> Unit = {}
+    onDeleteTrainer: (Trainer) -> Unit = {},
+    onUpdateTrainer: (Trainer) -> Unit = {}
 ) {
     var showAddTrainerDialog by remember { mutableStateOf(false) }
     var trainerToDelete by remember { mutableStateOf<Trainer?>(null) }
+    var trainerToEdit by remember { mutableStateOf<Trainer?>(null) }
 
     // Add Trainer Form States
     var newTrainerName by remember { mutableStateOf("") }
@@ -602,15 +604,27 @@ fun TrainersScreen(
                                 ) {
                                     Text(trainer.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                                     if (isAdmin) {
-                                        IconButton(
-                                            onClick = { trainerToDelete = trainer },
-                                            modifier = Modifier.size(32.dp)
-                                        ) {
-                                            Icon(
-                                                Icons.Default.DeleteOutline,
-                                                contentDescription = "Delete Trainer",
-                                                tint = Color(0xFFDC2626)
-                                            )
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            IconButton(
+                                                onClick = { trainerToEdit = trainer },
+                                                modifier = Modifier.size(32.dp)
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.Edit,
+                                                    contentDescription = "Edit Trainer",
+                                                    tint = SaffronPrimary
+                                                )
+                                            }
+                                            IconButton(
+                                                onClick = { trainerToDelete = trainer },
+                                                modifier = Modifier.size(32.dp)
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.DeleteOutline,
+                                                    contentDescription = "Delete Trainer",
+                                                    tint = Color(0xFFDC2626)
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -792,6 +806,99 @@ fun TrainersScreen(
             },
             dismissButton = {
                 TextButton(onClick = { trainerToDelete = null }) {
+                    Text("रद्द करें")
+                }
+            }
+        )
+    }
+
+    // Edit Trainer Dialog for Admin
+    trainerToEdit?.let { currentTrainer ->
+        var editName by remember(currentTrainer) { mutableStateOf(currentTrainer.name) }
+        var editBg by remember(currentTrainer) { mutableStateOf(currentTrainer.serviceBackground) }
+        var editSpec by remember(currentTrainer) { mutableStateOf(currentTrainer.specialization) }
+        var editExp by remember(currentTrainer) { mutableStateOf(currentTrainer.experience) }
+        var editIntro by remember(currentTrainer) { mutableStateOf(currentTrainer.introduction) }
+        var editContact by remember(currentTrainer) { mutableStateOf(currentTrainer.contactNumber) }
+
+        AlertDialog(
+            onDismissRequest = { trainerToEdit = null },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Edit, contentDescription = null, tint = SaffronPrimary)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("प्रशिक्षक विवरण संपादित करें", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedTextField(
+                        value = editName,
+                        onValueChange = { editName = it },
+                        label = { Text("प्रशिक्षक का नाम *") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editContact,
+                        onValueChange = { editContact = it },
+                        label = { Text("मोबाइल / संपर्क नंबर") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editBg,
+                        onValueChange = { editBg = it },
+                        label = { Text("पृष्ठभूमि (उदा. पूर्व सेना / फिजिकल ट्रेनर)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editExp,
+                        onValueChange = { editExp = it },
+                        label = { Text("अनुभव (उदा. 8+ वर्ष)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editSpec,
+                        onValueChange = { editSpec = it },
+                        label = { Text("विशेषज्ञता (उदा. 1600m रनिंग, बीम, पुश-अप्स)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editIntro,
+                        onValueChange = { editIntro = it },
+                        label = { Text("संक्षिप्त परिचय") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 2
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (editName.isNotBlank()) {
+                            onUpdateTrainer(
+                                currentTrainer.copy(
+                                    name = editName.trim(),
+                                    serviceBackground = editBg.trim(),
+                                    specialization = editSpec.trim(),
+                                    experience = editExp.trim(),
+                                    introduction = editIntro.trim(),
+                                    contactNumber = editContact.trim()
+                                )
+                            )
+                            trainerToEdit = null
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = SaffronPrimary),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("सहेजें (Save Changes)")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { trainerToEdit = null }) {
                     Text("रद्द करें")
                 }
             }

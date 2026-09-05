@@ -385,7 +385,7 @@ fun ForgotPasswordScreen(
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "यदि आप अपनी छात्र आईडी या एडमिन पिन भूल गए हैं, तो कृपया ग्राउंड पर मुख्य कोच/संचालक से संपर्क करें या डिफ़ॉल्ट एडमिन पिन (1234) का उपयोग करें।",
+                                    text = "यदि आप अपनी छात्र आईडी या पासवर्ड भूल गए हैं, तो कृपया ग्राउंड पर मुख्य कोच/संचालक से संपर्क करें। व्यवस्थापक पोर्टल केवल अधिकृत ID एवं पासवर्ड (231298) से ही सुरक्षित खुलता है।",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

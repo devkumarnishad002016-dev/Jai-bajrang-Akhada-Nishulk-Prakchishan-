@@ -13,7 +13,15 @@ data class Trainer(
     val specialization: String, // e.g. "1600m रनिंग, फिजिकल एंड्योरेंस, ग्राउंड ट्रेनिंग"
     val introduction: String, // e.g. "मौरिकला गुफा अखाड़े में युवाओं को अनुशासित प्रशिक्षण"
     val contactNumber: String = "",
-    val displayOrder: Int = 1
+    val displayOrder: Int = 1,
+    val coachId: String = "", // e.g. "JBA-COACH-001"
+    val achievement: String = "", // e.g. "CRPF SSC GD", "Agniveer Tradesman", "CG Police Constable GD", "ITBP"
+    val role: String = "TRAINER",
+    val passwordHash: String = "",
+    val passwordSalt: String = "",
+    val forcePasswordChange: Boolean = true,
+    val active: Boolean = true,
+    val createdAt: Long = System.currentTimeMillis()
 )
 
 @Entity(tableName = "gallery_items")

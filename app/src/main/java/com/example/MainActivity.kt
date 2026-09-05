@@ -118,6 +118,7 @@ fun MainApp(viewModel: MainViewModel) {
     val allTrainingRecords by viewModel.allTrainingRecords.collectAsState()
     val allNotifications by viewModel.allNotifications.collectAsState()
     val unreadNotificationsCount by viewModel.unreadNotificationsCount.collectAsState()
+    val adminPhotoUri by viewModel.adminPhotoUri.collectAsState()
 
     // Test specific state
     val testTitle by viewModel.testTitle.collectAsState()
@@ -472,7 +473,10 @@ fun MainApp(viewModel: MainViewModel) {
             composable("profile") {
                 StudentProfileScreen(
                     student = activeStudent,
-                    onUpdateProfile = { s -> viewModel.updateStudent(s) }
+                    onUpdateProfile = { s -> viewModel.updateStudent(s) },
+                    adminPhotoUri = adminPhotoUri,
+                    onUpdateAdminPhoto = { uri -> viewModel.updateAdminPhoto(uri) },
+                    onRemoveAdminPhoto = { viewModel.removeAdminPhoto() }
                 )
             }
 
@@ -503,6 +507,7 @@ fun MainApp(viewModel: MainViewModel) {
                     isAdmin = RolePermissionManager.isAdmin(currentRole),
                     onAddTrainer = { trainer -> viewModel.addTrainer(trainer) },
                     onDeleteTrainer = { trainer -> viewModel.deleteTrainer(trainer) },
+                    onUpdateTrainer = { trainer -> viewModel.updateTrainer(trainer) },
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
@@ -543,6 +548,7 @@ fun MainApp(viewModel: MainViewModel) {
                     allNotices = allNotices,
                     latestWorkoutPlan = latestWorkoutPlan,
                     currentRole = currentRole,
+                    adminPhotoUri = adminPhotoUri,
                     cloudSyncStatus = cloudSyncStatus,
                     allAttendanceRecords = allAttendanceRecords,
                     allTrainingRecords = allTrainingRecords,
@@ -569,6 +575,7 @@ fun MainApp(viewModel: MainViewModel) {
                         contactInfo = contactInfo,
                         onAddTrainer = { t -> viewModel.addTrainer(t) },
                         onDeleteTrainer = { t -> viewModel.deleteTrainer(t) },
+                        onUpdateTrainer = { t -> viewModel.updateTrainer(t) },
                         onAddGalleryItem = { g -> viewModel.addGalleryItem(g) },
                         onDeleteGalleryItem = { g -> viewModel.deleteGalleryItem(g) },
                         onAddSuccessStory = { s -> viewModel.addSuccessStory(s) },

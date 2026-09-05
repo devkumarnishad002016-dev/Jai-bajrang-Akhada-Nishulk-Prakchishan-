@@ -363,6 +363,94 @@ class CloudAuthManager(
         return auth != null && firestore != null
     }
 
+    /**
+     * Syncs Coach profile to Firestore matching requested structure:
+     * users/{uid} { role: "TRAINER", coachId, name, achievement, active, forcePasswordChange, createdAt }
+     */
+    suspend fun syncCoachToFirestore(
+        coachId: String,
+        name: String,
+        achievement: String,
+        active: Boolean = true,
+        forcePasswordChange: Boolean = true
+    ): Result<String> = withContext(Dispatchers.IO) {
+        val db = firestore ?: return@withContext Result.failure(IllegalStateException("Firestore is not available"))
+        try {
+            val query = db.collection(FirestoreConstants.COLLECTION_USERS)
+                .whereEqualTo("coachId", coachId.trim())
+                .limit(1)
+                .get()
+                .await()
+
+            if (!query.isEmpty) {
+                val existingDoc = query.documents.first()
+                val docId = existingDoc.id
+                val updates = hashMapOf<String, Any?>(
+                    "role" to FirestoreConstants.ROLE_TRAINER,
+                    "name" to name.trim(),
+                    "achievement" to achievement.trim(),
+                    "active" to active,
+                    "coachId" to coachId.trim()
+                )
+                db.collection(FirestoreConstants.COLLECTION_USERS).document(docId).update(updates).await()
+                return@withContext Result.success(docId)
+            }
+
+            val deterministicDocId = "coach_${coachId.trim().lowercase().replace("-", "_")}"
+            val coachData = hashMapOf<String, Any?>(
+                "uid" to deterministicDocId,
+                "role" to FirestoreConstants.ROLE_TRAINER,
+                "coachId" to coachId.trim(),
+                "name" to name.trim(),
+                "displayName" to name.trim(),
+                "achievement" to achievement.trim(),
+                "active" to active,
+                "isActive" to active,
+                "forcePasswordChange" to forcePasswordChange,
+                "createdAt" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
+                "lastLoginAt" to System.currentTimeMillis()
+            )
+
+            db.collection(FirestoreConstants.COLLECTION_USERS)
+                .document(deterministicDocId)
+                .set(coachData)
+                .await()
+
+            Result.success(deterministicDocId)
+        } catch (e: Exception) {
+            Log.e(TAG, "syncCoachToFirestore error: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Updates forcePasswordChange flag in Firestore when coach updates their password.
+     */
+    suspend fun updateCoachPasswordChangedInFirestore(coachId: String): Result<Unit> = withContext(Dispatchers.IO) {
+        val db = firestore ?: return@withContext Result.success(Unit)
+        try {
+            val query = db.collection(FirestoreConstants.COLLECTION_USERS)
+                .whereEqualTo("coachId", coachId.trim())
+                .limit(1)
+                .get()
+                .await()
+
+            if (!query.isEmpty) {
+                val doc = query.documents.first()
+                doc.reference.update(
+                    mapOf(
+                        "forcePasswordChange" to false,
+                        "lastPasswordChangeAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+                    )
+                ).await()
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.w(TAG, "updateCoachPasswordChangedInFirestore warning: ${e.message}")
+            Result.success(Unit)
+        }
+    }
+
     fun getCurrentUser(): FirebaseUser? = auth?.currentUser
 
     private fun formatAuthErrorMessage(e: Exception): String {

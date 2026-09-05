@@ -233,6 +233,9 @@ class AppRepository(
     suspend fun addTrainer(trainer: Trainer) = dao.insertTrainer(trainer)
     suspend fun updateTrainer(trainer: Trainer) = dao.updateTrainer(trainer)
     suspend fun deleteTrainer(trainer: Trainer) = dao.deleteTrainer(trainer)
+    suspend fun getTrainerByCoachId(coachId: String): Trainer? = dao.getTrainerByCoachId(coachId)
+    fun getTrainerByCoachIdFlow(coachId: String): Flow<Trainer?> = dao.getTrainerByCoachIdFlow(coachId)
+    suspend fun seedInitialCoachesIfMissing() = com.example.util.CoachAuthManager.seedInitialCoaches(dao)
 
     // --- Gallery ---
     val allGalleryItems: Flow<List<GalleryItem>> = dao.getAllGalleryItems()

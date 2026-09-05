@@ -35,7 +35,7 @@ import kotlinx.coroutines.launch
         RaceResult::class,
         AppNotification::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -99,6 +99,20 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE trainers ADD COLUMN coachId TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE trainers ADD COLUMN achievement TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE trainers ADD COLUMN role TEXT NOT NULL DEFAULT 'TRAINER'")
+                db.execSQL("ALTER TABLE trainers ADD COLUMN passwordHash TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE trainers ADD COLUMN passwordSalt TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE trainers ADD COLUMN forcePasswordChange INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE trainers ADD COLUMN active INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE trainers ADD COLUMN createdAt INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_trainers_coachId` ON `trainers` (`coachId`)")
+            }
+        }
+
         fun getDatabase(context: Context, scope: CoroutineScope): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -106,7 +120,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "jai_bajrang_akhada.db"
                 )
-                .addMigrations(MIGRATION_5_6, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
+                .addMigrations(MIGRATION_5_6, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
                 .fallbackToDestructiveMigration()
                 .addCallback(DatabaseCallback(scope))
                 .build()
@@ -126,9 +140,19 @@ abstract class AppDatabase : RoomDatabase() {
                     }
                 }
             }
+
+            override fun onOpen(db: SupportSQLiteDatabase) {
+                super.onOpen(db)
+                INSTANCE?.let { database ->
+                    scope.launch(Dispatchers.IO) {
+                        com.example.util.CoachAuthManager.seedInitialCoaches(database.appDao())
+                    }
+                }
+            }
         }
 
         suspend fun populateInitialData(dao: AppDao) {
+            com.example.util.CoachAuthManager.seedInitialCoaches(dao)
             dao.insertStudents(DemoDataGenerator.getSampleStudents())
             dao.insertAttendanceList(DemoDataGenerator.getSampleAttendance())
             dao.insertTrainingRecords(DemoDataGenerator.getSampleTrainingRecords())

@@ -141,7 +141,15 @@ object ProfileUtils {
             FileOutputStream(photoFile).use { out ->
                 bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
             }
-            Uri.fromFile(photoFile).toString()
+            if (photoFile.exists() && photoFile.length() > 0) {
+                // Clean up previous photos for this specific student/admin
+                photoDir.listFiles { _, name -> name.startsWith("photo_${cleanId}_") && name != photoFile.name }?.forEach {
+                    try { it.delete() } catch (_: Exception) {}
+                }
+                Uri.fromFile(photoFile).toString()
+            } else {
+                ""
+            }
         } catch (e: Exception) {
             e.printStackTrace()
             ""
@@ -160,11 +168,19 @@ object ProfileUtils {
                 FileOutputStream(photoFile).use { output ->
                     input.copyTo(output)
                 }
+            } ?: return ""
+            if (photoFile.exists() && photoFile.length() > 0) {
+                // Clean up previous photos for this specific student/admin
+                photoDir.listFiles { _, name -> name.startsWith("photo_${cleanId}_") && name != photoFile.name }?.forEach {
+                    try { it.delete() } catch (_: Exception) {}
+                }
+                Uri.fromFile(photoFile).toString()
+            } else {
+                ""
             }
-            Uri.fromFile(photoFile).toString()
         } catch (e: Exception) {
             e.printStackTrace()
-            sourceUri.toString()
+            ""
         }
     }
 }

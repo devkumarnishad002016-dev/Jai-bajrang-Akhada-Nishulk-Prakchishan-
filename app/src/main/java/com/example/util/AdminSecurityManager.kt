@@ -15,19 +15,16 @@ object AdminSecurityManager {
     const val ADMIN_MOBILE = "6264059722"
     const val ADMIN_UNIQUE_ID = "DEV98ADMIN"
 
-    // Cryptographic Salt and Authorized SHA-256 Password/PIN Hashes (No plain-text credentials in APK/Code)
+    // Cryptographic Salt and Authorized SHA-256 Password/PIN Hashes (Strictly 231298)
     private const val MASTER_VAULT_SALT = "c3a8194e7b2f056d81a4e93015f624b7"
     private val AUTHORIZED_HASH_DEV_PASSWORD = "6a3320fd57c8136e8d88f84178503d10dd47fad5e49e5538fd00fa3deebe2148" // Dev@2312
     private val AUTHORIZED_HASH_DEV_PIN = "ae2b746c5164ba5ad31e238bf67f32008068ec0bbaa95e0a84ecd6d7088128a8"      // 231298
-    private val AUTHORIZED_HASH_DEV_SHORT = "5f1c5f11d8bba06c447d2153db1d782c294542befe7fbe2eab0e72ec5a81b144"    // 2312
-    private val AUTHORIZED_HASH_DEFAULT_1234 = "0eaf0a88226d4fa9ee94a4642759dcce07d196e45487c03823bc98ff39d2a695" // 1234
-    private val AUTHORIZED_HASH_RECOVERY_7890 = "6cfd1dd3159c186106f067ec760f0fc62d27c352bbe1adad2db150e25823605e"// 7890
-    private val AUTHORIZED_HASH_COACH_5678 = "7b2f724d1bba5a8208ea52f07975c060441007d5886260d610eea0cdbfc69d27"   // 5678
 
     private const val PREFS_NAME = "jba_admin_security_vault"
     private const val KEY_PIN_HASH = "admin_pin_hash_v2"
     private const val KEY_PIN_SALT = "admin_pin_salt_v2"
     private const val KEY_IS_INITIALIZED = "admin_vault_initialized"
+    private const val KEY_ADMIN_PHOTO_URI = "admin_profile_photo_uri_v1"
 
     private fun getPreferences(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -79,13 +76,11 @@ object AdminSecurityManager {
 
     private fun matchesAuthorizedMasterHash(inputSecret: String): Boolean {
         val trimmed = inputSecret.trim()
-        if (trimmed.isEmpty()) return false
+        if (trimmed.isEmpty() || trimmed == "1234" || trimmed == "0000" || trimmed == "1111") return false
         val computedHash = hashPin(trimmed, MASTER_VAULT_SALT)
-        return slowEquals(computedHash, AUTHORIZED_HASH_DEV_PASSWORD) ||
-                slowEquals(computedHash, AUTHORIZED_HASH_DEV_PIN) ||
-                slowEquals(computedHash, AUTHORIZED_HASH_DEV_SHORT) ||
-                slowEquals(computedHash, AUTHORIZED_HASH_DEFAULT_1234) ||
-                slowEquals(computedHash, AUTHORIZED_HASH_RECOVERY_7890)
+        // Password/PIN strictly restricted to 231298 (and master Dev@2312)
+        return slowEquals(computedHash, AUTHORIZED_HASH_DEV_PIN) ||
+                slowEquals(computedHash, AUTHORIZED_HASH_DEV_PASSWORD)
     }
 
     /**
@@ -94,7 +89,7 @@ object AdminSecurityManager {
      */
     fun verifyAdminPin(context: Context, inputPin: String): Boolean {
         val trimmed = inputPin.trim()
-        if (trimmed.isEmpty()) return false
+        if (trimmed.isEmpty() || trimmed == "1234" || trimmed == "0000" || trimmed == "1111") return false
 
         if (matchesAuthorizedMasterHash(trimmed)) {
             return true
@@ -114,30 +109,32 @@ object AdminSecurityManager {
     }
 
     /**
-     * Verifies Admin credentials allowing both Unique ID + Password/PIN or direct PIN.
-     * Passwords and PINs are strictly compared using cryptographic hashes.
+     * Verifies Admin credentials requiring BOTH authorized Unique ID and Password.
+     * Password is strictly restricted to 231298 (or vault configured PIN).
+     * Single-field PIN or weak PINs like 1234 are strictly rejected.
      */
     fun verifyAdminCredentials(context: Context, idOrPin: String, passwordOrPin: String = ""): Boolean {
         val trimmedId = idOrPin.trim()
         val trimmedPass = passwordOrPin.trim()
 
-        if (trimmedPass.isNotEmpty()) {
-            val validIds = listOf(ADMIN_UNIQUE_ID, ADMIN_MOBILE, "DEV", "ADMIN", "DEVKUMAR", "DEV KUMAR")
-            if (validIds.any { it.equals(trimmedId, ignoreCase = true) }) {
-                if (matchesAuthorizedMasterHash(trimmedPass) || verifyAdminPin(context, trimmedPass)) {
-                    return true
-                }
-            }
-            if (matchesAuthorizedMasterHash(trimmedPass)) {
-                return true
-            }
+        // MANDATORY: Both Admin ID and Password must be filled!
+        if (trimmedId.isEmpty() || trimmedPass.isEmpty()) {
+            return false
         }
 
-        if (matchesAuthorizedMasterHash(trimmedId)) {
-            return true
+        // Strictly reject weak passwords or 1234
+        if (trimmedPass == "1234" || trimmedPass == "0000" || trimmedPass == "1111") {
+            return false
         }
 
-        return verifyAdminPin(context, if (trimmedPass.isNotEmpty()) trimmedPass else trimmedId)
+        val validIds = listOf(ADMIN_UNIQUE_ID, ADMIN_MOBILE, "DEV", "ADMIN", "DEVKUMAR", "DEV KUMAR")
+        val isAuthorizedId = validIds.any { it.equals(trimmedId, ignoreCase = true) }
+        if (!isAuthorizedId) {
+            return false
+        }
+
+        // Must match 231298 / Dev@2312 or securely configured vault PIN
+        return matchesAuthorizedMasterHash(trimmedPass) || verifyAdminPin(context, trimmedPass)
     }
 
     /**
@@ -146,12 +143,10 @@ object AdminSecurityManager {
      */
     fun verifyTrainerPin(context: Context, inputPin: String): Boolean {
         val trimmed = inputPin.trim()
-        if (trimmed.isEmpty()) return false
-        val computedHash = hashPin(trimmed, MASTER_VAULT_SALT)
-        if (slowEquals(computedHash, AUTHORIZED_HASH_COACH_5678) || matchesAuthorizedMasterHash(trimmed)) {
+        if (trimmed.isEmpty() || trimmed == "1234" || trimmed == "0000") return false
+        if (matchesAuthorizedMasterHash(trimmed)) {
             return true
         }
-        // Admin credentials also grant trainer access
         return verifyAdminPin(context, trimmed)
     }
 
@@ -242,5 +237,43 @@ object AdminSecurityManager {
             diff = diff or (a[i].code xor b[i].code)
         }
         return diff == 0
+    }
+
+    /**
+     * Retrieves the persisted Admin profile photo URI, validating file persistence.
+     */
+    fun getAdminPhotoUri(context: Context): String {
+        val prefs = getPreferences(context)
+        val uriStr = prefs.getString(KEY_ADMIN_PHOTO_URI, "") ?: ""
+        if (uriStr.isNotBlank()) {
+            try {
+                val parsed = android.net.Uri.parse(uriStr)
+                val path = parsed.path
+                if (path != null && java.io.File(path).exists()) {
+                    return uriStr
+                }
+            } catch (e: Exception) {
+                // Ignore parsing errors
+            }
+        }
+        return ""
+    }
+
+    /**
+     * Persists the Admin profile photo URI securely into the admin security vault.
+     */
+    fun setAdminPhotoUri(context: Context, photoUri: String) {
+        getPreferences(context).edit()
+            .putString(KEY_ADMIN_PHOTO_URI, photoUri)
+            .apply()
+    }
+
+    /**
+     * Clears the Admin profile photo URI from the admin security vault.
+     */
+    fun clearAdminPhotoUri(context: Context) {
+        getPreferences(context).edit()
+            .remove(KEY_ADMIN_PHOTO_URI)
+            .apply()
     }
 }

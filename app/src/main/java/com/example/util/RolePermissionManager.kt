@@ -59,6 +59,16 @@ object RolePermissionManager {
     fun canManageAdminSecurity(role: String?): Boolean = isAdmin(role)
 
     /**
+     * Delete or remove other Trainer accounts: Strictly Admin only.
+     */
+    fun canDeleteTrainer(role: String?): Boolean = isAdmin(role)
+
+    /**
+     * Modify sensitive app configuration: Strictly Admin only.
+     */
+    fun canChangeSensitiveConfig(role: String?): Boolean = isAdmin(role)
+
+    /**
      * User Roles & Authorization Management: Strictly Admin only.
      */
     fun canManageUserRoles(role: String?): Boolean = isAdmin(role)

@@ -40,6 +40,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isAdminPinConfigured = MutableStateFlow(AdminSecurityManager.isPinConfigured(getApplication()))
     val isAdminPinConfigured: StateFlow<Boolean> = _isAdminPinConfigured.asStateFlow()
 
+    // Admin Profile Photo State
+    private val _adminPhotoUri = MutableStateFlow(AdminSecurityManager.getAdminPhotoUri(getApplication()))
+    val adminPhotoUri: StateFlow<String> = _adminPhotoUri.asStateFlow()
+
+    fun updateAdminPhoto(photoUri: String) {
+        _adminPhotoUri.value = photoUri
+        AdminSecurityManager.setAdminPhotoUri(getApplication(), photoUri)
+    }
+
+    fun removeAdminPhoto() {
+        _adminPhotoUri.value = ""
+        AdminSecurityManager.clearAdminPhotoUri(getApplication())
+    }
+
     fun refreshAdminPinStatus() {
         _isAdminPinConfigured.value = AdminSecurityManager.isPinConfigured(getApplication())
     }
@@ -1107,7 +1121,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updateStudent(student: StudentProfile) {
-        if (!RolePermissionManager.canEnrollStudent(_currentRole.value)) return
+        val currentRole = _currentRole.value
+        val isSelf = (student.studentId == _activeStudentId.value)
+        if (!RolePermissionManager.canEnrollStudent(currentRole) && !isSelf) return
         viewModelScope.launch {
             repository.updateStudent(student)
         }
