@@ -52,16 +52,20 @@ fun LoginScreen(
     isAdminPinConfigured: Boolean = true,
     onSetupInitialAdminPin: ((String) -> Result<Unit>)? = null,
     onTrainerLogin: ((String) -> Boolean)? = null,
+    onTrainerLoginWithCredentials: ((String, String) -> Boolean)? = null,
     onSendPhoneOtp: ((activity: android.app.Activity, phone: String, onCodeSent: (String) -> Unit, onAutoVerified: () -> Unit, onError: (String) -> Unit) -> Unit)? = null,
     onVerifyPhoneOtp: ((verificationId: String, otp: String, fullName: String, onSuccess: () -> Unit, onError: (String) -> Unit) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    var selectedTab by remember { mutableIntStateOf(0) } // 0 = Student, 1 = Admin
+    var selectedTab by remember { mutableIntStateOf(0) } // 0 = Student, 1 = Coach, 2 = Admin
     var studentLoginMode by remember { mutableIntStateOf(0) } // 0 = Student ID, 1 = Phone OTP
     var studentIdInput by remember { mutableStateOf("") }
     var studentPasswordInput by remember { mutableStateOf("") }
     var showStudentPassword by remember { mutableStateOf(false) }
+    var coachIdInput by remember { mutableStateOf("") }
+    var coachPasswordInput by remember { mutableStateOf("") }
+    var showCoachPassword by remember { mutableStateOf(false) }
     var phoneNumberInput by remember { mutableStateOf("") }
     var phoneOtpInput by remember { mutableStateOf("") }
     var phoneVerificationId by remember { mutableStateOf<String?>(null) }
@@ -179,7 +183,7 @@ fun LoginScreen(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                "छात्र प्रवेश (Student)",
+                                "छात्र (Cadet)",
                                 fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal
                             )
                         }
@@ -196,14 +200,37 @@ fun LoginScreen(
                     text = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
+                                imageVector = Icons.Default.SportsScore,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                "कोच (Coach)",
+                                fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    },
+                    modifier = Modifier.testTag("tab_coach_login")
+                )
+
+                Tab(
+                    selected = selectedTab == 2,
+                    onClick = {
+                        selectedTab = 2
+                        errorMessage = null
+                    },
+                    text = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
                                 imageVector = Icons.Default.AdminPanelSettings,
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                "प्रशिक्षक (Admin)",
-                                fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal
+                                "एडमिन (Admin)",
+                                fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Normal
                             )
                         }
                     },
@@ -301,7 +328,7 @@ fun LoginScreen(
                                 errorMessage = null
                             },
                             label = { Text("छात्र पासवर्ड (Password) *") },
-                            placeholder = { Text("अपना पासवर्ड दर्ज करें (डिफ़ॉल्ट: Student@123)") },
+                            placeholder = { Text("अपना गोपनीय पासवर्ड दर्ज करें") },
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.Default.Lock,
@@ -417,8 +444,224 @@ fun LoginScreen(
             }
         }
 
-        // 5. Tab 1: Admin / Trainer Login
+        // 5. Tab 1: Coach / Trainer Login
         if (selectedTab == 1) {
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("coach_login_card"),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(CircleShape)
+                                    .background(SaffronPrimary.copy(alpha = 0.2f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.SportsScore,
+                                    contentDescription = null,
+                                    tint = SaffronPrimary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "ग्राउंड कोच एवं शारीरिक प्रशिक्षक पोर्टल",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "जय बजरंग अखाड़ा अधिकृत कोच लॉगिन",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        // Coach info banner
+                        Surface(
+                            color = SaffronContainer.copy(alpha = 0.4f),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Verified,
+                                    contentDescription = null,
+                                    tint = SaffronDark,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "अधिकृत 4 जवान कोच: अपनी Coach ID (उदा. JBA-COACH-001) एवं पासवर्ड दर्ज करें।",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = OnSaffronContainer
+                                )
+                            }
+                        }
+
+                        // 4 Coaches quick selector chips
+                        Text(
+                            text = "अधिकृत कोच आईडी (Quick Select):",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            val coachesQuick = listOf(
+                                "JBA-COACH-001" to "001 (CRPF)",
+                                "JBA-COACH-002" to "002 (अग्निवीर)",
+                                "JBA-COACH-003" to "003 (CG पुलिस)",
+                                "JBA-COACH-004" to "004 (ITBP)"
+                            )
+                            coachesQuick.forEach { (cid, lbl) ->
+                                FilterChip(
+                                    selected = coachIdInput == cid,
+                                    onClick = {
+                                        coachIdInput = cid
+                                        errorMessage = null
+                                    },
+                                    label = { Text(lbl, fontSize = 11.sp) },
+                                    modifier = Modifier.testTag("chip_$cid")
+                                )
+                            }
+                        }
+
+                        // Coach ID Input
+                        OutlinedTextField(
+                            value = coachIdInput,
+                            onValueChange = {
+                                coachIdInput = it
+                                errorMessage = null
+                            },
+                            label = { Text("कोच ID (Coach ID) *") },
+                            placeholder = { Text("उदा. JBA-COACH-001") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Badge,
+                                    contentDescription = null,
+                                    tint = SaffronPrimary
+                                )
+                            },
+                            trailingIcon = {
+                                if (coachIdInput.isNotEmpty()) {
+                                    IconButton(onClick = { coachIdInput = "" }) {
+                                        Icon(Icons.Default.Clear, contentDescription = "Clear")
+                                    }
+                                }
+                            },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Text,
+                                imeAction = ImeAction.Next
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("coach_id_input"),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        // Coach Password Input
+                        OutlinedTextField(
+                            value = coachPasswordInput,
+                            onValueChange = {
+                                coachPasswordInput = it
+                                errorMessage = null
+                            },
+                            label = { Text("गोपनीय पासवर्ड (Password) *") },
+                            placeholder = { Text("अधिकृत पासवर्ड दर्ज करें") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = null,
+                                    tint = OliveTertiary
+                                )
+                            },
+                            trailingIcon = {
+                                IconButton(onClick = { showCoachPassword = !showCoachPassword }) {
+                                    Icon(
+                                        imageVector = if (showCoachPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                        contentDescription = "Toggle password visibility"
+                                    )
+                                }
+                            },
+                            visualTransformation = if (showCoachPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Password,
+                                imeAction = ImeAction.Done
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onDone = {
+                                    val trimmedId = coachIdInput.trim()
+                                    val trimmedPass = coachPasswordInput.trim()
+                                    if (trimmedId.isBlank() || trimmedPass.isBlank()) {
+                                        errorMessage = "कृपया Coach ID एवं पासवर्ड दोनों दर्ज करें!"
+                                        return@KeyboardActions
+                                    }
+                                    val success = onTrainerLoginWithCredentials?.invoke(trimmedId, trimmedPass)
+                                        ?: onTrainerLogin?.invoke(trimmedPass) ?: false
+                                    if (!success) {
+                                        errorMessage = "अमान्य कोच क्रेडेंशियल्स! कृपया सही Coach ID एवं पासवर्ड दर्ज करें।"
+                                    }
+                                }
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("coach_password_input"),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        Button(
+                            onClick = {
+                                val trimmedId = coachIdInput.trim()
+                                val trimmedPass = coachPasswordInput.trim()
+                                if (trimmedId.isBlank() || trimmedPass.isBlank()) {
+                                    errorMessage = "कृपया Coach ID एवं पासवर्ड दोनों दर्ज करें!"
+                                    return@Button
+                                }
+                                val success = onTrainerLoginWithCredentials?.invoke(trimmedId, trimmedPass)
+                                    ?: onTrainerLogin?.invoke(trimmedPass) ?: false
+                                if (!success) {
+                                    errorMessage = "अमान्य कोच क्रेडेंशियल्स! कृपया सही Coach ID एवं पासवर्ड दर्ज करें।"
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = SaffronPrimary),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp)
+                                .testTag("coach_login_button")
+                        ) {
+                            Icon(Icons.Default.Login, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("कोच पोर्टल में प्रवेश करें (Coach Login)", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        }
+                    }
+                }
+            }
+        }
+
+        // 6. Tab 2: Admin Login
+        if (selectedTab == 2) {
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -622,7 +865,7 @@ fun LoginScreen(
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = "उच्च सुरक्षा: व्यवस्थापक पैनल केवल अधिकृत ID एवं पासवर्ड (231298) से ही खुलेगा। कमजोर पिन (1234) पूर्णतः बंद है।",
+                                        text = "उच्च सुरक्षा: व्यवस्थापक पोर्टल केवल अधिकृत व्यवस्थापक (Admin) क्रेडेंशियल्स से ही सुरक्षित रूप से खुलेगा।",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onErrorContainer
                                     )
@@ -637,7 +880,7 @@ fun LoginScreen(
                                     errorMessage = null
                                 },
                                 label = { Text("व्यवस्थापक ID (Admin ID) *") },
-                                placeholder = { Text("उदा. DEV98ADMIN या 6264059722") },
+                                placeholder = { Text("अधिकृत ID या मोबाइल नंबर दर्ज करें") },
                                 leadingIcon = {
                                     Icon(
                                         imageVector = Icons.Default.Badge,
@@ -664,8 +907,8 @@ fun LoginScreen(
                                     adminPinInput = it
                                     errorMessage = null
                                 },
-                                label = { Text("व्यवस्थापक पासवर्ड (Password: 231298) *") },
-                                placeholder = { Text("अधिकृत पासवर्ड दर्ज करें (231298)") },
+                                label = { Text("व्यवस्थापक पासवर्ड (Password) *") },
+                                placeholder = { Text("गोपनीय पासवर्ड दर्ज करें") },
                                 leadingIcon = {
                                     Icon(
                                         imageVector = Icons.Default.Lock,
@@ -693,21 +936,22 @@ fun LoginScreen(
                                         val trimmedPass = adminPasswordInput.trim().ifEmpty { adminPinInput.trim() }
 
                                         if (trimmedId.isBlank() || trimmedPass.isBlank()) {
-                                            errorMessage = "व्यवस्थापक ID एवं पासवर्ड (231298) दोनों भरना अनिवार्य है!"
+                                            errorMessage = "व्यवस्थापक ID एवं पासवर्ड दोनों भरना अनिवार्य है!"
                                             return@KeyboardActions
                                         }
 
                                         if (trimmedPass == "1234" || trimmedPass == "0000" || trimmedPass == "1111") {
-                                            errorMessage = "1234 कमजोर पासवर्ड है और बंद कर दिया गया है! केवल अधिकृत पासवर्ड (231298) से ही एडमिन पैनल खुलेगा।"
+                                            errorMessage = "कमजोर पासवर्ड अमान्य है! केवल अधिकृत पासवर्ड से ही एडमिन पैनल खुलेगा।"
                                             return@KeyboardActions
                                         }
 
                                         val adminSuccess = onAdminLoginWithCredentials?.invoke(trimmedId, trimmedPass)
                                             ?: onAdminLogin(trimmedPass)
                                         if (!adminSuccess) {
-                                            val trainerSuccess = onTrainerLogin?.invoke(trimmedPass) ?: false
+                                            val trainerSuccess = onTrainerLoginWithCredentials?.invoke(trimmedId, trimmedPass)
+                                                ?: onTrainerLogin?.invoke(trimmedPass) ?: false
                                             if (!trainerSuccess) {
-                                                errorMessage = "गलत क्रेडेंशियल्स! केवल अधिकृत व्यवस्थापक ID एवं पासवर्ड (231298) दर्ज करें।"
+                                                errorMessage = "गलत क्रेडेंशियल्स! केवल अधिकृत व्यवस्थापक ID एवं पासवर्ड दर्ज करें।"
                                             }
                                         }
                                     }
@@ -725,21 +969,22 @@ fun LoginScreen(
                                     val trimmedPass = adminPasswordInput.trim().ifEmpty { adminPinInput.trim() }
 
                                     if (trimmedId.isBlank() || trimmedPass.isBlank()) {
-                                        errorMessage = "व्यवस्थापक ID एवं पासवर्ड (231298) दोनों भरना अनिवार्य है!"
+                                        errorMessage = "व्यवस्थापक ID एवं पासवर्ड दोनों भरना अनिवार्य है!"
                                         return@Button
                                     }
 
                                     if (trimmedPass == "1234" || trimmedPass == "0000" || trimmedPass == "1111") {
-                                        errorMessage = "1234 कमजोर पासवर्ड है और बंद कर दिया गया है! केवल अधिकृत पासवर्ड (231298) से ही एडमिन पैनल खुलेगा।"
+                                        errorMessage = "कमजोर पासवर्ड अमान्य है! केवल अधिकृत पासवर्ड से ही एडमिन पैनल खुलेगा।"
                                         return@Button
                                     }
 
                                     val adminSuccess = onAdminLoginWithCredentials?.invoke(trimmedId, trimmedPass)
                                         ?: onAdminLogin(trimmedPass)
                                     if (!adminSuccess) {
-                                        val trainerSuccess = onTrainerLogin?.invoke(trimmedPass) ?: false
+                                        val trainerSuccess = onTrainerLoginWithCredentials?.invoke(trimmedId, trimmedPass)
+                                            ?: onTrainerLogin?.invoke(trimmedPass) ?: false
                                         if (!trainerSuccess) {
-                                            errorMessage = "गलत क्रेडेंशियल्स! केवल अधिकृत व्यवस्थापक ID एवं पासवर्ड (231298) दर्ज करें।"
+                                            errorMessage = "गलत क्रेडेंशियल्स! केवल अधिकृत व्यवस्थापक ID एवं पासवर्ड दर्ज करें।"
                                         }
                                     }
                                 },
@@ -802,8 +1047,7 @@ fun StudentSelfRegistrationDialog(
     onRegister: (StudentProfile) -> Unit
 ) {
     val nextId = remember(allStudents) {
-        val count = allStudents.size + 1
-        String.format(Locale.getDefault(), "JBA-2026-%03d", count)
+        com.example.util.ProfileUtils.generateNextStudentId(allStudents)
     }
 
     var name by remember { mutableStateOf("") }

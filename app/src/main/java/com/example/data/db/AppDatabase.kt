@@ -33,9 +33,10 @@ import kotlinx.coroutines.launch
         ContactInfo::class,
         RaceSession::class,
         RaceResult::class,
-        AppNotification::class
+        AppNotification::class,
+        OutboxEntity::class
     ],
-    version = 11,
+    version = 12,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -113,6 +114,40 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // 1. Soft-delete and audit timestamps on students
+                db.execSQL("ALTER TABLE students ADD COLUMN isDeleted INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE students ADD COLUMN createdAt INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE students ADD COLUMN updatedAt INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_students_studentId` ON `students` (`studentId`)")
+
+                // 2. Outbox persistent queue table for crash-safe offline sync
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `outbox_items` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `deduplicationKey` TEXT NOT NULL,
+                        `entityType` TEXT NOT NULL,
+                        `localRecordId` TEXT NOT NULL,
+                        `firestoreDocId` TEXT NOT NULL,
+                        `operation` TEXT NOT NULL DEFAULT 'UPSERT',
+                        `studentId` TEXT,
+                        `timestamp` INTEGER NOT NULL,
+                        `retryCount` INTEGER NOT NULL DEFAULT 0,
+                        `syncState` TEXT NOT NULL DEFAULT 'PENDING',
+                        `lastError` TEXT,
+                        `nextRetryTime` INTEGER NOT NULL DEFAULT 0,
+                        `createdAt` INTEGER NOT NULL DEFAULT 0,
+                        `lastAttemptAt` INTEGER NOT NULL DEFAULT 0
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_outbox_items_deduplicationKey` ON `outbox_items` (`deduplicationKey`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_outbox_items_syncState` ON `outbox_items` (`syncState`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_outbox_items_studentId` ON `outbox_items` (`studentId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_outbox_items_timestamp` ON `outbox_items` (`timestamp`)")
+            }
+        }
+
         fun getDatabase(context: Context, scope: CoroutineScope): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -120,8 +155,14 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "jai_bajrang_akhada.db"
                 )
-                .addMigrations(MIGRATION_5_6, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
-                .fallbackToDestructiveMigration()
+                .addMigrations(
+                    MIGRATION_5_6,
+                    MIGRATION_7_8,
+                    MIGRATION_8_9,
+                    MIGRATION_9_10,
+                    MIGRATION_10_11,
+                    MIGRATION_11_12
+                )
                 .addCallback(DatabaseCallback(scope))
                 .build()
                 INSTANCE = instance

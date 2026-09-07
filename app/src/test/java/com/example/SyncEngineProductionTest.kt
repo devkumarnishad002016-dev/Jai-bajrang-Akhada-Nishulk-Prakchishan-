@@ -298,6 +298,63 @@ class SyncEngineProductionTest {
         override suspend fun deleteNotification(id: Long) {
             notifications.removeAll { it.id == id }
         }
+
+        // Soft delete and student methods
+        override suspend fun getAllStudentsIncludingDeletedDirect(): List<StudentProfile> = students.toList()
+        override suspend fun softDeleteStudent(studentId: String, timestamp: Long): Int {
+            val idx = students.indexOfFirst { it.studentId == studentId }
+            return if (idx != -1) {
+                students[idx] = students[idx].copy(isDeleted = true, updatedAt = timestamp)
+                1
+            } else 0
+        }
+
+        // Trainer credentials & management
+        val trainersList = mutableListOf<Trainer>()
+        override suspend fun getAllTrainersDirect(): List<Trainer> = trainersList.toList()
+        override suspend fun getTrainerByCoachId(coachId: String): Trainer? = trainersList.find { it.coachId == coachId }
+        override fun getTrainerByCoachIdFlow(coachId: String): Flow<Trainer?> = flowOf(trainersList.find { it.coachId == coachId })
+
+        // Outbox queue persistence
+        val outboxList = mutableListOf<OutboxEntity>()
+        override suspend fun getPendingOutboxItems(currentTime: Long): List<OutboxEntity> =
+            outboxList.filter { it.syncState != "SYNCED" && it.syncState != "PERMANENT_FAILURE" && it.nextRetryTime <= currentTime }
+        override fun getAllOutboxItemsFlow(): Flow<List<OutboxEntity>> = flowOf(outboxList)
+        override suspend fun getAllOutboxItemsDirect(): List<OutboxEntity> = outboxList.toList()
+        override suspend fun getOutboxItemByKey(key: String): OutboxEntity? = outboxList.find { it.deduplicationKey == key }
+        override suspend fun insertOrUpdateOutbox(item: OutboxEntity): Long {
+            outboxList.removeAll { it.deduplicationKey == item.deduplicationKey }
+            val id = if (item.id > 0) item.id else (outboxList.size + 1).toLong()
+            outboxList.add(item.copy(id = id))
+            return id
+        }
+        override suspend fun updateOutboxStatus(
+            key: String,
+            state: String,
+            retryCount: Int,
+            error: String?,
+            nextRetry: Long,
+            attemptAt: Long
+        ) {
+            val idx = outboxList.indexOfFirst { it.deduplicationKey == key }
+            if (idx != -1) {
+                outboxList[idx] = outboxList[idx].copy(
+                    syncState = state,
+                    retryCount = retryCount,
+                    lastError = error,
+                    nextRetryTime = nextRetry,
+                    lastAttemptAt = attemptAt
+                )
+            }
+        }
+        override suspend fun deleteOutboxItemByKey(key: String) {
+            outboxList.removeAll { it.deduplicationKey == key }
+        }
+        override suspend fun cleanupCompletedOutbox(olderThanTime: Long) {
+            outboxList.removeAll { it.syncState == "SYNCED" }
+        }
+        override suspend fun getPendingOutboxCount(): Int =
+            outboxList.count { it.syncState == "PENDING" || it.syncState == "IN_PROGRESS" || it.syncState == "TRANSIENT_FAILURE" }
     }
 
     private lateinit var fakeDao: FakeAppDao

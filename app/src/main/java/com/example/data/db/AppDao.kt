@@ -8,22 +8,25 @@ import kotlinx.coroutines.flow.Flow
 interface AppDao {
 
     // --- Students ---
-    @Query("SELECT * FROM students ORDER BY id ASC")
+    @Query("SELECT * FROM students WHERE isDeleted = 0 ORDER BY id ASC")
     fun getAllStudents(): Flow<List<StudentProfile>>
 
-    @Query("SELECT * FROM students ORDER BY id ASC")
+    @Query("SELECT * FROM students WHERE isDeleted = 0 ORDER BY id ASC")
     suspend fun getAllStudentsDirect(): List<StudentProfile>
 
-    @Query("SELECT * FROM students WHERE studentId = :studentId LIMIT 1")
+    @Query("SELECT * FROM students ORDER BY id ASC")
+    suspend fun getAllStudentsIncludingDeletedDirect(): List<StudentProfile>
+
+    @Query("SELECT * FROM students WHERE studentId = :studentId AND isDeleted = 0 LIMIT 1")
     fun getStudentById(studentId: String): Flow<StudentProfile?>
 
     @Query("SELECT * FROM students WHERE studentId = :studentId LIMIT 1")
     suspend fun getStudentDirect(studentId: String): StudentProfile?
 
-    @Query("SELECT * FROM students WHERE mobileNumber = :mobileNumber LIMIT 1")
+    @Query("SELECT * FROM students WHERE mobileNumber = :mobileNumber AND isDeleted = 0 LIMIT 1")
     suspend fun getStudentByMobile(mobileNumber: String): StudentProfile?
 
-    @Query("SELECT COUNT(*) FROM students WHERE mobileNumber = :mobileNumber")
+    @Query("SELECT COUNT(*) FROM students WHERE mobileNumber = :mobileNumber AND isDeleted = 0")
     suspend fun countStudentsWithMobile(mobileNumber: String): Int
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -37,6 +40,9 @@ interface AppDao {
 
     @Delete
     suspend fun deleteStudent(student: StudentProfile)
+
+    @Query("UPDATE students SET isDeleted = 1, updatedAt = :timestamp WHERE studentId = :studentId")
+    suspend fun softDeleteStudent(studentId: String, timestamp: Long = System.currentTimeMillis()): Int
 
     // --- Attendance ---
     @Query("SELECT * FROM attendance_records ORDER BY date DESC, id DESC")
@@ -517,5 +523,33 @@ interface AppDao {
 
     @Query("DELETE FROM app_notifications WHERE id = :id")
     suspend fun deleteNotification(id: Long)
+
+    // --- Outbox Queue ---
+    @Query("SELECT * FROM outbox_items WHERE syncState NOT IN ('SYNCED', 'PERMANENT_FAILURE') AND nextRetryTime <= :currentTime ORDER BY timestamp ASC")
+    suspend fun getPendingOutboxItems(currentTime: Long): List<OutboxEntity>
+
+    @Query("SELECT * FROM outbox_items ORDER BY timestamp DESC")
+    fun getAllOutboxItemsFlow(): Flow<List<OutboxEntity>>
+
+    @Query("SELECT * FROM outbox_items ORDER BY timestamp DESC")
+    suspend fun getAllOutboxItemsDirect(): List<OutboxEntity>
+
+    @Query("SELECT * FROM outbox_items WHERE deduplicationKey = :key LIMIT 1")
+    suspend fun getOutboxItemByKey(key: String): OutboxEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOrUpdateOutbox(item: OutboxEntity): Long
+
+    @Query("UPDATE outbox_items SET syncState = :state, retryCount = :retryCount, lastError = :error, nextRetryTime = :nextRetry, lastAttemptAt = :attemptAt WHERE deduplicationKey = :key")
+    suspend fun updateOutboxStatus(key: String, state: String, retryCount: Int, error: String?, nextRetry: Long, attemptAt: Long)
+
+    @Query("DELETE FROM outbox_items WHERE deduplicationKey = :key")
+    suspend fun deleteOutboxItemByKey(key: String)
+
+    @Query("DELETE FROM outbox_items WHERE syncState = 'SYNCED' AND timestamp < :olderThanTime")
+    suspend fun cleanupCompletedOutbox(olderThanTime: Long)
+
+    @Query("SELECT COUNT(*) FROM outbox_items WHERE syncState IN ('PENDING', 'IN_PROGRESS', 'TRANSIENT_FAILURE')")
+    suspend fun getPendingOutboxCount(): Int
 }
 

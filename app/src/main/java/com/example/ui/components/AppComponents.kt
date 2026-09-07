@@ -322,7 +322,7 @@ fun AppBottomNavigationBar(
         if (isTrainer) {
             // Coach / Trainer bottom items
             val trainerItems = listOf(
-                Triple("admin_dashboard", "डैशबोर्ड", Icons.Default.Dashboard),
+                Triple("coach_dashboard", "कोच डैशबोर्ड", Icons.Default.Dashboard),
                 Triple("admin_attendance", "हाजिरी", Icons.Default.FactCheck),
                 Triple("admin_workout", "वर्कआउट", Icons.Default.SportsScore),
                 Triple("training", "ग्राउंड ड्रिल", Icons.Default.FitnessCenter),

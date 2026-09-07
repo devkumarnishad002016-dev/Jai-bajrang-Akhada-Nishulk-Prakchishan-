@@ -17,6 +17,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.ui.components.AppBottomNavigationBar
 import com.example.ui.components.AppTopHeader
 import com.example.ui.screens.auth.LoginScreen
+import com.example.ui.screens.coach.CoachDashboardScreen
 import com.example.ui.screens.admin.*
 import com.example.ui.screens.attendance.AttendanceScreen
 import com.example.ui.screens.chat.CoachDoubtChatScreen
@@ -59,9 +60,9 @@ class MainActivity : ComponentActivity() {
                         onAdminLogin = { pin -> viewModel.loginAsAdmin(pin) },
                         onAdminLoginWithCredentials = { id, password -> viewModel.loginAsAdmin(id, password) },
                         onTrainerLogin = { pin -> viewModel.loginAsTrainer(pin) },
+                        onTrainerLoginWithCredentials = { id, password -> viewModel.loginAsTrainer(id, password) },
                         onRegisterStudent = { newStudent ->
-                            viewModel.addStudent(newStudent)
-                            viewModel.loginAsStudentDirect(newStudent.studentId)
+                            viewModel.registerStudent(newStudent)
                         },
                         onSendPhoneOtp = { activity, phone, onCodeSent, onAutoVerified, onError ->
                             viewModel.sendPhoneOtp(activity, phone, onCodeSent, onAutoVerified, onError)
@@ -85,6 +86,8 @@ fun MainApp(viewModel: MainViewModel) {
     val currentRoute = navBackStackEntry?.destination?.route ?: "dashboard"
 
     val currentRole by viewModel.currentRole.collectAsState()
+    val activeCoach by viewModel.activeCoach.collectAsState()
+    val mustChangeCoachPassword by viewModel.mustChangeCoachPassword.collectAsState()
     val activeStudent by viewModel.activeStudent.collectAsState()
     val allStudents by viewModel.allStudents.collectAsState()
     val todayAttendance by viewModel.todayAttendance.collectAsState()
@@ -134,6 +137,7 @@ fun MainApp(viewModel: MainViewModel) {
     val isFullScreenTest = currentRoute == "active_test"
     val isMainTabScreen = currentRoute in listOf(
         "dashboard",
+        "coach_dashboard",
         "training",
         "attendance",
         "workout",
@@ -155,13 +159,17 @@ fun MainApp(viewModel: MainViewModel) {
                     allStudents = allStudents,
                     onRoleToggle = { role ->
                         viewModel.switchRole(role)
-                        if (role == "ADMIN" || role == "TRAINER") {
+                        if (role == "TRAINER") {
+                            navController.navigate("coach_dashboard") {
+                                popUpTo(0) { inclusive = false }
+                            }
+                        } else if (role == "ADMIN") {
                             navController.navigate("admin_dashboard") {
                                 popUpTo("dashboard") { inclusive = false }
                             }
                         } else {
                             navController.navigate("dashboard") {
-                                popUpTo("admin_dashboard") { inclusive = true }
+                                popUpTo(0) { inclusive = false }
                             }
                         }
                     },
@@ -202,9 +210,38 @@ fun MainApp(viewModel: MainViewModel) {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = if (currentRole == "STUDENT") "dashboard" else "admin_dashboard",
+            startDestination = when (currentRole) {
+                RolePermissionManager.ROLE_TRAINER -> "coach_dashboard"
+                RolePermissionManager.ROLE_STUDENT -> "dashboard"
+                else -> "admin_dashboard"
+            },
             modifier = Modifier.padding(innerPadding)
         ) {
+            // --- Coach / Trainer Dashboard ---
+            composable("coach_dashboard") {
+                CoachDashboardScreen(
+                    coach = activeCoach,
+                    allStudents = allStudents,
+                    allNotices = allNotices,
+                    latestWorkoutPlan = latestWorkoutPlan,
+                    allAttendanceRecords = allAttendanceRecords,
+                    allTrainingRecords = allTrainingRecords,
+                    mustChangePassword = mustChangeCoachPassword,
+                    onNavigate = { route -> navController.navigate(route) },
+                    onRecordGroundTest = { studentId, time1600m, pushups, situps, pullups, longJumpFeet, highJumpFeet, shotPutMeters, coachNotes ->
+                        viewModel.recordGroundPhysicalPerformance(
+                            studentId, time1600m, pushups, situps, pullups, longJumpFeet, highJumpFeet, shotPutMeters, coachNotes
+                        )
+                    },
+                    onChangePassword = { coachId, newPass ->
+                        viewModel.updateCoachPassword(coachId, newPass)
+                    },
+                    onDismissPasswordPrompt = {
+                        viewModel.dismissCoachPasswordChangePrompt()
+                    }
+                )
+            }
+
             // --- Student Screens ---
             composable("dashboard") {
                 DashboardScreen(

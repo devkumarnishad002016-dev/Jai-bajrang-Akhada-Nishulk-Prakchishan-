@@ -5,6 +5,8 @@ import com.example.data.cloud.CloudAuthState
 import com.example.data.cloud.CloudSyncStatus
 import com.example.data.cloud.FirestoreDataSyncManager
 import com.example.data.cloud.SyncDiagnostics
+import com.example.data.cloud.SyncEntityType
+import com.example.data.cloud.SyncOperation
 import com.example.data.db.AppDao
 import com.example.data.db.AppDatabase
 import com.example.data.db.DemoDataGenerator
@@ -82,6 +84,8 @@ class AppRepository(
     fun getStudent(studentId: String): Flow<StudentProfile?> = dao.getStudentById(studentId)
     suspend fun getStudentByMobile(mobile: String): StudentProfile? = dao.getStudentByMobile(mobile)
     suspend fun isMobileRegistered(mobile: String): Boolean = dao.countStudentsWithMobile(mobile) > 0
+    suspend fun getAllStudentsDirect(): List<StudentProfile> = dao.getAllStudentsDirect()
+    suspend fun getAllStudentsIncludingDeletedDirect(): List<StudentProfile> = dao.getAllStudentsIncludingDeletedDirect()
 
     fun getAttendanceForStudent(studentId: String): Flow<List<AttendanceRecord>> =
         dao.getAttendanceForStudent(studentId)
@@ -125,7 +129,26 @@ class AppRepository(
 
     suspend fun insertStudent(student: StudentProfile) = dao.insertStudent(student)
     suspend fun updateStudent(student: StudentProfile) = dao.updateStudent(student)
-    suspend fun deleteStudent(student: StudentProfile) = dao.deleteStudent(student)
+    suspend fun softDeleteStudent(studentId: String) {
+        dao.softDeleteStudent(studentId)
+        cloudSyncManager.queueSync(
+            entityType = SyncEntityType.STUDENT,
+            localRecordId = studentId,
+            firestoreDocId = studentId,
+            operation = SyncOperation.DELETE,
+            studentId = studentId
+        )
+    }
+    suspend fun deleteStudent(student: StudentProfile) {
+        dao.deleteStudent(student)
+        cloudSyncManager.queueSync(
+            entityType = SyncEntityType.STUDENT,
+            localRecordId = student.studentId,
+            firestoreDocId = student.studentId,
+            operation = SyncOperation.DELETE,
+            studentId = student.studentId
+        )
+    }
 
     suspend fun markAttendance(record: AttendanceRecord) = dao.insertAttendance(record)
     suspend fun markBatchAttendance(records: List<AttendanceRecord>) = dao.insertAttendanceList(records)
@@ -303,20 +326,21 @@ class AppRepository(
     suspend fun deleteNotificationFromCloud(notifId: String) = cloudSyncManager.deleteNotificationFromCloud(notifId)
 
     suspend fun ensureDataSeeded() {
+        seedInitialCoachesIfMissing()
         val existingStudents = dao.getAllStudentsDirect()
         if (existingStudents.isEmpty()) {
             AppDatabase.populateInitialData(dao)
         } else {
-            // Purge old demo accounts (JBA-2026-003 to 008 or legacy demo names)
-            val realStudents = DemoDataGenerator.getSampleStudents()
-            val realIds = realStudents.map { it.studentId }.toSet()
-            for (st in existingStudents) {
-                if (st.studentId !in realIds && st.studentId.startsWith("JBA-2026-00")) {
-                    dao.deleteStudent(st)
+            // Ensure foundational initial students (Ujala & Janeshwari) exist if missing,
+            // but NEVER delete or purge any newly registered students!
+            val initialStudents = DemoDataGenerator.getSampleStudents()
+            val existingIds = existingStudents.map { it.studentId }.toSet()
+            val existingMobiles = existingStudents.map { it.mobileNumber }.toSet()
+            for (defaultStudent in initialStudents) {
+                if (defaultStudent.studentId !in existingIds && defaultStudent.mobileNumber !in existingMobiles) {
+                    dao.insertStudent(defaultStudent)
                 }
             }
-            // Ensure the real 2 students are updated with passwordHash and accurate details
-            dao.insertStudents(realStudents)
 
             val existingChapters = dao.getAllChaptersDirect()
             if (existingChapters.isEmpty() || existingChapters.size < 63) {

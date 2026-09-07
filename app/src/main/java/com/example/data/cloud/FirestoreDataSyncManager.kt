@@ -26,7 +26,7 @@ import kotlinx.coroutines.withContext
 class FirestoreDataSyncManager(
     private val appDao: AppDao,
     private val firestore: FirebaseFirestore? = runCatching { FirebaseFirestore.getInstance() }.getOrNull(),
-    val outbox: SyncOutboxManager = SyncOutboxManager()
+    val outbox: SyncOutboxManager = SyncOutboxManager(appDao)
 ) {
     private val TAG = "FirestoreDataSync"
 
@@ -276,7 +276,25 @@ class FirestoreDataSyncManager(
                 _syncStatus.value = CloudSyncStatus.Syncing("कैडेट प्रोफाइल एवं उपस्थिति सिंक किए जा रहे हैं...")
                 val remoteStudents = fetchStudentsFromCloudInternal(db)
                 if (remoteStudents.isNotEmpty()) {
-                    appDao.insertStudents(remoteStudents)
+                    for (remote in remoteStudents) {
+                        val local = appDao.getStudentDirect(remote.studentId) ?: appDao.getStudentByMobile(remote.mobileNumber)
+                        if (local != null) {
+                            // Preserve local Room primary key, local password hash/salt, local photo, and delete status
+                            val merged = remote.copy(
+                                id = local.id,
+                                studentId = local.studentId,
+                                passwordHash = if (local.passwordHash.isNotBlank()) local.passwordHash else remote.passwordHash,
+                                passwordSalt = if (local.passwordSalt.isNotBlank()) local.passwordSalt else remote.passwordSalt,
+                                profilePhotoUri = if (local.profilePhotoUri.isNotBlank()) local.profilePhotoUri else remote.profilePhotoUri,
+                                isDeleted = local.isDeleted,
+                                createdAt = if (local.createdAt > 0) local.createdAt else remote.createdAt,
+                                updatedAt = maxOf(local.updatedAt, remote.updatedAt)
+                            )
+                            appDao.updateStudent(merged)
+                        } else {
+                            appDao.insertStudent(remote)
+                        }
+                    }
                     totalSynced += remoteStudents.size
                 }
             }

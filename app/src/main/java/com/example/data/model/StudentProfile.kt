@@ -7,7 +7,8 @@ import androidx.room.PrimaryKey
 @Entity(
     tableName = "students",
     indices = [
-        Index(value = ["mobileNumber"], unique = true)
+        Index(value = ["mobileNumber"], unique = true),
+        Index(value = ["studentId"], unique = true)
     ]
 )
 data class StudentProfile(
@@ -48,7 +49,10 @@ data class StudentProfile(
     val assignedTrainerName: String = "देव कुमार निषाद (मुख्य कोच)",
     val batchName: String = "सुबह आर्मी स्पेशल बैच (Morning Army Batch)",
     val passwordHash: String = "",
-    val passwordSalt: String = ""
+    val passwordSalt: String = "",
+    val isDeleted: Boolean = false,
+    val createdAt: Long = 0L,
+    val updatedAt: Long = 0L
 ) {
     val joiningDate: String get() = joinDate
 }

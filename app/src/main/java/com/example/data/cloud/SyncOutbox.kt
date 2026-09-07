@@ -78,15 +78,48 @@ data class SyncDiagnostics(
  * - Calculates bounded exponential backoff on transient errors.
  * - Halts infinite retries on permanent failures (Permission Denied, Malformed, Security Rule Rejection).
  */
-class SyncOutboxManager {
+class SyncOutboxManager(
+    private val appDao: com.example.data.db.AppDao? = null
+) {
     private val mutex = Mutex()
     private val queue = mutableMapOf<String, SyncOutboxItem>() // Key: entityType + "_" + firestoreDocId
+    private var isHydrated = false
 
     private var lastSyncTime: Long = 0L
     private var totalSyncedCount: Int = 0
 
     private val _diagnostics = MutableStateFlow(SyncDiagnostics())
     val diagnostics: StateFlow<SyncDiagnostics> = _diagnostics.asStateFlow()
+
+    private suspend fun ensureHydratedLocked() {
+        if (!isHydrated && appDao != null) {
+            try {
+                val dbItems = appDao.getAllOutboxItemsDirect()
+                for (dbItem in dbItems) {
+                    val entityType = runCatching { SyncEntityType.valueOf(dbItem.entityType) }.getOrNull() ?: continue
+                    val op = runCatching { SyncOperation.valueOf(dbItem.operation) }.getOrDefault(SyncOperation.UPSERT)
+                    val state = runCatching { SyncState.valueOf(dbItem.syncState) }.getOrDefault(SyncState.PENDING)
+                    val item = SyncOutboxItem(
+                        id = dbItem.id.toString(),
+                        entityType = entityType,
+                        localRecordId = dbItem.localRecordId,
+                        firestoreDocId = dbItem.firestoreDocId,
+                        operation = op,
+                        studentId = dbItem.studentId,
+                        timestamp = dbItem.timestamp,
+                        retryCount = dbItem.retryCount,
+                        syncState = state,
+                        lastError = dbItem.lastError,
+                        nextRetryTime = dbItem.nextRetryTime
+                    )
+                    queue[dbItem.deduplicationKey] = item
+                }
+            } catch (e: Exception) {
+                // Database during test or early init
+            }
+            isHydrated = true
+        }
+    }
 
     suspend fun enqueue(
         entityType: SyncEntityType,
@@ -95,6 +128,7 @@ class SyncOutboxManager {
         operation: SyncOperation = SyncOperation.UPSERT,
         studentId: String? = null
     ): SyncOutboxItem = mutex.withLock {
+        ensureHydratedLocked()
         val deduplicationKey = "${entityType.name}_$firestoreDocId"
         val existing = queue[deduplicationKey]
 
@@ -119,6 +153,23 @@ class SyncOutboxManager {
         }
 
         queue[deduplicationKey] = item
+        runCatching {
+            appDao?.insertOrUpdateOutbox(
+                com.example.data.model.OutboxEntity(
+                    deduplicationKey = deduplicationKey,
+                    entityType = entityType.name,
+                    localRecordId = localRecordId,
+                    firestoreDocId = firestoreDocId,
+                    operation = operation.name,
+                    studentId = studentId,
+                    timestamp = item.timestamp,
+                    retryCount = item.retryCount,
+                    syncState = item.syncState.name,
+                    lastError = item.lastError,
+                    nextRetryTime = item.nextRetryTime
+                )
+            )
+        }
         updateDiagnosticsLocked()
         item
     }
@@ -128,6 +179,7 @@ class SyncOutboxManager {
         isAdmin: Boolean,
         currentTime: Long = System.currentTimeMillis()
     ): List<SyncOutboxItem> = mutex.withLock {
+        ensureHydratedLocked()
         queue.values.filter { item ->
             if (item.syncState == SyncState.SYNCED || item.syncState == SyncState.PERMANENT_FAILURE) {
                 return@filter false
@@ -150,19 +202,43 @@ class SyncOutboxManager {
     }
 
     suspend fun markInProgress(item: SyncOutboxItem) = mutex.withLock {
+        ensureHydratedLocked()
         val key = "${item.entityType.name}_${item.firestoreDocId}"
-        queue[key] = item.copy(syncState = SyncState.IN_PROGRESS)
+        val updated = item.copy(syncState = SyncState.IN_PROGRESS)
+        queue[key] = updated
+        runCatching {
+            appDao?.updateOutboxStatus(
+                key = key,
+                state = SyncState.IN_PROGRESS.name,
+                retryCount = item.retryCount,
+                error = item.lastError,
+                nextRetry = item.nextRetryTime,
+                attemptAt = System.currentTimeMillis()
+            )
+        }
         updateDiagnosticsLocked()
     }
 
     suspend fun markSuccess(item: SyncOutboxItem) = mutex.withLock {
+        ensureHydratedLocked()
         val key = "${item.entityType.name}_${item.firestoreDocId}"
-        queue[key] = item.copy(
+        val updated = item.copy(
             syncState = SyncState.SYNCED,
             lastError = null
         )
+        queue[key] = updated
         lastSyncTime = System.currentTimeMillis()
         totalSyncedCount++
+        runCatching {
+            appDao?.updateOutboxStatus(
+                key = key,
+                state = SyncState.SYNCED.name,
+                retryCount = item.retryCount,
+                error = null,
+                nextRetry = 0L,
+                attemptAt = System.currentTimeMillis()
+            )
+        }
         updateDiagnosticsLocked()
     }
 
@@ -171,6 +247,7 @@ class SyncOutboxManager {
         error: Throwable,
         isPermanent: Boolean = false
     ) = mutex.withLock {
+        ensureHydratedLocked()
         val key = "${item.entityType.name}_${item.firestoreDocId}"
         val newRetry = item.retryCount + 1
 
@@ -192,10 +269,21 @@ class SyncOutboxManager {
         )
 
         queue[key] = updated
+        runCatching {
+            appDao?.updateOutboxStatus(
+                key = key,
+                state = updated.syncState.name,
+                retryCount = updated.retryCount,
+                error = updated.lastError,
+                nextRetry = updated.nextRetryTime,
+                attemptAt = System.currentTimeMillis()
+            )
+        }
         updateDiagnosticsLocked(error.message)
     }
 
     suspend fun clearCompleted() = mutex.withLock {
+        ensureHydratedLocked()
         val iterator = queue.entries.iterator()
         while (iterator.hasNext()) {
             val entry = iterator.next()
@@ -203,10 +291,14 @@ class SyncOutboxManager {
                 iterator.remove()
             }
         }
+        runCatching {
+            appDao?.cleanupCompletedOutbox(System.currentTimeMillis())
+        }
         updateDiagnosticsLocked()
     }
 
     suspend fun getQueueSnapshot(): List<SyncOutboxItem> = mutex.withLock {
+        ensureHydratedLocked()
         queue.values.toList()
     }
 

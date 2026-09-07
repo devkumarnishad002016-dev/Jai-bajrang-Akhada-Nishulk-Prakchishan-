@@ -17,6 +17,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import com.example.data.cloud.SyncEntityType
+import com.example.data.cloud.SyncOperation
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -73,6 +77,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _activeStudentId = MutableStateFlow("JBA-2026-001")
     val activeStudentId: StateFlow<String> = _activeStudentId.asStateFlow()
 
+    // Active Ground Coach / Trainer State
+    private val _activeCoach = MutableStateFlow<Trainer?>(null)
+    val activeCoach: StateFlow<Trainer?> = _activeCoach.asStateFlow()
+
+    // Flag indicating coach must change initial password
+    private val _mustChangeCoachPassword = MutableStateFlow(false)
+    val mustChangeCoachPassword: StateFlow<Boolean> = _mustChangeCoachPassword.asStateFlow()
+
     fun loginAsStudent(studentIdInput: String, passwordInput: String): Boolean {
         val trimmedId = studentIdInput.trim()
         val trimmedPass = passwordInput.trim()
@@ -124,17 +136,103 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     /**
      * Authenticates Ground Coach / Trainer.
+     * Supports Coach ID (e.g. JBA-COACH-001) with salted SHA-256 hashed password,
+     * as well as legacy fallback coach pin.
      */
-    fun loginAsTrainer(pinInput: String): Boolean {
-        val trimmed = pinInput.trim()
-        val isValid = AdminSecurityManager.verifyTrainerPin(getApplication(), trimmed)
-        if (isValid) {
+    fun loginAsTrainer(coachIdOrPin: String, passwordInput: String = ""): Boolean {
+        val trimmedId = coachIdOrPin.trim()
+        val trimmedPass = passwordInput.trim()
+
+        // 1. If password is provided, authenticate against Coach credentials
+        if (trimmedPass.isNotEmpty()) {
+            val matchingCoach = allTrainers.value.find {
+                it.coachId.equals(trimmedId, ignoreCase = true) ||
+                it.name.equals(trimmedId, ignoreCase = true) ||
+                it.contactNumber.equals(trimmedId, ignoreCase = true)
+            } ?: com.example.util.CoachAuthManager.getInitialCoachesList().find {
+                it.coachId.equals(trimmedId, ignoreCase = true) ||
+                it.name.equals(trimmedId, ignoreCase = true)
+            }
+
+            if (matchingCoach != null) {
+                val isVerified = com.example.util.CoachAuthManager.verifyCoachCredentials(matchingCoach, trimmedPass)
+                if (isVerified) {
+                    _activeCoach.value = matchingCoach
+                    _currentRole.value = RolePermissionManager.ROLE_TRAINER
+                    authenticatedStaffRole = RolePermissionManager.ROLE_TRAINER
+                    _isLoggedIn.value = true
+                    _mustChangeCoachPassword.value = matchingCoach.forcePasswordChange
+
+                    // Async cloud sync
+                    viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                        try {
+                            repository.cloudAuthManager.syncCoachToFirestore(
+                                coachId = matchingCoach.coachId,
+                                name = matchingCoach.name,
+                                achievement = matchingCoach.achievement,
+                                active = matchingCoach.active,
+                                forcePasswordChange = matchingCoach.forcePasswordChange
+                            )
+                        } catch (e: Exception) {
+                            android.util.Log.e("MainViewModel", "Firestore sync coach error", e)
+                        }
+                    }
+                    return true
+                }
+            }
+        }
+
+        // 2. Legacy fallback check
+        val isValidPin = AdminSecurityManager.verifyTrainerPin(getApplication(), trimmedId)
+        if (isValidPin) {
+            val defaultCoach = allTrainers.value.firstOrNull()
+                ?: com.example.util.CoachAuthManager.getInitialCoachesList().first()
+            _activeCoach.value = defaultCoach
             _currentRole.value = RolePermissionManager.ROLE_TRAINER
             authenticatedStaffRole = RolePermissionManager.ROLE_TRAINER
             _isLoggedIn.value = true
+            _mustChangeCoachPassword.value = false
             return true
         }
         return false
+    }
+
+    /**
+     * Updates Coach password and enforces security policy.
+     */
+    fun updateCoachPassword(coachId: String, newPassword: String): Result<Unit> {
+        val policyError = com.example.util.CoachAuthManager.validatePasswordPolicy(newPassword)
+        if (policyError != null) {
+            return Result.failure(IllegalArgumentException(policyError))
+        }
+
+        val trimmedId = coachId.trim()
+        val trainer = allTrainers.value.find { it.coachId.equals(trimmedId, ignoreCase = true) }
+            ?: return Result.failure(IllegalStateException("कोच विवरण नहीं मिला (Coach profile not found)"))
+
+        val (newHash, newSalt) = com.example.util.CoachAuthManager.createPasswordCredentials(newPassword)
+        val updatedTrainer = trainer.copy(
+            passwordHash = newHash,
+            passwordSalt = newSalt,
+            forcePasswordChange = false
+        )
+
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            repository.updateTrainer(updatedTrainer)
+            try {
+                repository.cloudAuthManager.updateCoachPasswordChangedInFirestore(trimmedId)
+            } catch (e: Exception) {
+                android.util.Log.e("MainViewModel", "Firestore update coach error", e)
+            }
+        }
+
+        _activeCoach.value = updatedTrainer
+        _mustChangeCoachPassword.value = false
+        return Result.success(Unit)
+    }
+
+    fun dismissCoachPasswordChangePrompt() {
+        _mustChangeCoachPassword.value = false
     }
 
     /**
@@ -165,27 +263,70 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return result
     }
 
+    private val registrationMutex = Mutex()
+
     /**
      * Registers a new student securely after validating mobile number uniqueness.
      */
-    suspend fun registerStudentSecurely(student: StudentProfile): Result<StudentProfile> {
+    suspend fun registerStudentSecurely(student: StudentProfile): Result<StudentProfile> = registrationMutex.withLock {
         val trimmedMobile = student.mobileNumber.trim()
         val digitsOnly = trimmedMobile.filter { it.isDigit() }
         if (digitsOnly.length != 10) {
-            return Result.failure(IllegalArgumentException("कृपया 10 अंकों का वैध मोबाइल नंबर दर्ज करें! (10 digits required)"))
+            return@withLock Result.failure(IllegalArgumentException("कृपया 10 अंकों का वैध मोबाइल नंबर दर्ज करें! (10 digits required)"))
         }
 
         val isAlreadyRegistered = repository.isMobileRegistered(trimmedMobile)
         if (isAlreadyRegistered) {
-            return Result.failure(IllegalArgumentException("यह मोबाइल नंबर ($trimmedMobile) पहले से पंजीकृत है! कृपया दूसरा नंबर दर्ज करें या अपनी आईडी से लॉगिन करें।"))
+            return@withLock Result.failure(IllegalArgumentException("यह मोबाइल नंबर ($trimmedMobile) पहले से पंजीकृत है! कृपया दूसरा नंबर दर्ज करें या अपनी आईडी से लॉगिन करें।"))
         }
 
-        val studentToSave = student.copy(mobileNumber = trimmedMobile)
+        val allStudents = repository.getAllStudentsIncludingDeletedDirect()
+        val existingIds = allStudents.map { it.studentId }.toSet()
+        val finalStudentId = if (student.studentId.isBlank() || student.studentId in existingIds) {
+            com.example.util.ProfileUtils.generateNextStudentId(allStudents)
+        } else {
+            student.studentId.trim()
+        }
+
+        val now = System.currentTimeMillis()
+        val studentToSave = student.copy(
+            studentId = finalStudentId,
+            mobileNumber = trimmedMobile,
+            createdAt = if (student.createdAt > 0) student.createdAt else now,
+            updatedAt = now,
+            isDeleted = false
+        )
         repository.insertStudent(studentToSave)
         _activeStudentId.value = studentToSave.studentId
         _currentRole.value = RolePermissionManager.ROLE_STUDENT
         _isLoggedIn.value = true
-        return Result.success(studentToSave)
+
+        repository.cloudSyncManager.queueSync(
+            entityType = SyncEntityType.STUDENT,
+            localRecordId = studentToSave.studentId,
+            firestoreDocId = studentToSave.studentId,
+            operation = SyncOperation.UPSERT,
+            studentId = studentToSave.studentId
+        )
+
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                repository.uploadStudentToCloud(studentToSave)
+            } catch (e: Exception) {
+                android.util.Log.e("MainViewModel", "Cloud sync student on register", e)
+            }
+        }
+        Result.success(studentToSave)
+    }
+
+    /**
+     * Non-suspending convenience launcher for UI components.
+     */
+    fun registerStudent(student: StudentProfile, onResult: (Result<StudentProfile>) -> Unit = {}) {
+        viewModelScope.launch {
+            val result = registerStudentSecurely(student)
+            onResult(result)
+        }
     }
 
     fun logout() {
@@ -396,7 +537,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteTrainer(trainer: Trainer) {
-        if (!RolePermissionManager.canManageContentCms(_currentRole.value)) return
+        if (!RolePermissionManager.canDeleteTrainer(_currentRole.value)) return
         viewModelScope.launch { repository.deleteTrainer(trainer) }
     }
 
@@ -1104,19 +1245,54 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         viewModelScope.launch {
-            val trimmedMobile = student.mobileNumber.trim()
-            val digitsOnly = trimmedMobile.filter { it.isDigit() }
-            if (digitsOnly.length != 10) {
-                onResult(Result.failure(IllegalArgumentException("कृपया 10 अंकों का वैध मोबाइल नंबर दर्ज करें!")))
-                return@launch
+            registrationMutex.withLock {
+                val trimmedMobile = student.mobileNumber.trim()
+                val digitsOnly = trimmedMobile.filter { it.isDigit() }
+                if (digitsOnly.length != 10) {
+                    onResult(Result.failure(IllegalArgumentException("कृपया 10 अंकों का वैध मोबाइल नंबर दर्ज करें!")))
+                    return@withLock
+                }
+                val exists = repository.isMobileRegistered(trimmedMobile)
+                if (exists) {
+                    onResult(Result.failure(IllegalArgumentException("मोबाइल नंबर ($trimmedMobile) पहले से पंजीकृत है!")))
+                    return@withLock
+                }
+
+                val allStudents = repository.getAllStudentsIncludingDeletedDirect()
+                val existingIds = allStudents.map { it.studentId }.toSet()
+                val finalStudentId = if (student.studentId.isBlank() || student.studentId in existingIds) {
+                    com.example.util.ProfileUtils.generateNextStudentId(allStudents)
+                } else {
+                    student.studentId.trim()
+                }
+
+                val now = System.currentTimeMillis()
+                val savedStudent = student.copy(
+                    studentId = finalStudentId,
+                    mobileNumber = trimmedMobile,
+                    createdAt = if (student.createdAt > 0) student.createdAt else now,
+                    updatedAt = now,
+                    isDeleted = false
+                )
+                repository.insertStudent(savedStudent)
+
+                repository.cloudSyncManager.queueSync(
+                    entityType = SyncEntityType.STUDENT,
+                    localRecordId = savedStudent.studentId,
+                    firestoreDocId = savedStudent.studentId,
+                    operation = SyncOperation.UPSERT,
+                    studentId = savedStudent.studentId
+                )
+
+                viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                    try {
+                        repository.uploadStudentToCloud(savedStudent)
+                    } catch (e: Exception) {
+                        android.util.Log.e("MainViewModel", "Cloud sync student on enroll", e)
+                    }
+                }
+                onResult(Result.success(Unit))
             }
-            val exists = repository.isMobileRegistered(trimmedMobile)
-            if (exists) {
-                onResult(Result.failure(IllegalArgumentException("मोबाइल नंबर ($trimmedMobile) पहले से पंजीकृत है!")))
-                return@launch
-            }
-            repository.insertStudent(student.copy(mobileNumber = trimmedMobile))
-            onResult(Result.success(Unit))
         }
     }
 

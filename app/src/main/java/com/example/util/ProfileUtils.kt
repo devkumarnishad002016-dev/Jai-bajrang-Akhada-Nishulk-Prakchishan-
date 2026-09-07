@@ -124,6 +124,11 @@ object ProfileUtils {
                         maxSequence = seq
                     }
                 }
+            } else {
+                val seq = Regex("""\d+""").findAll(id).map { it.value.toIntOrNull() ?: 0 }.filter { it != year }.maxOrNull() ?: 0
+                if (seq > maxSequence) {
+                    maxSequence = seq
+                }
             }
         }
         val nextSeq = maxSequence + 1
