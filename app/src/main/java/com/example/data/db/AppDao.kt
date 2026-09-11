@@ -60,6 +60,12 @@ interface AppDao {
     @Query("SELECT * FROM attendance_records WHERE date = :date")
     fun getAttendanceByDate(date: String): Flow<List<AttendanceRecord>>
 
+    @Query("SELECT * FROM attendance_records WHERE studentId = :studentId AND date = :date LIMIT 1")
+    suspend fun getAttendanceForStudentAndDateDirect(studentId: String, date: String): AttendanceRecord?
+
+    @Query("DELETE FROM attendance_records WHERE studentId = :studentId AND date = :date")
+    suspend fun deleteAttendanceForDate(studentId: String, date: String): Int
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAttendance(record: AttendanceRecord): Long
 
@@ -183,6 +189,40 @@ interface AppDao {
 
     @Delete
     suspend fun deleteTopic(topic: StudyTopic)
+
+    // --- Topic Documents (PDF & Excel File Uploads) ---
+    @Query("SELECT * FROM topic_documents ORDER BY timestamp DESC, id DESC")
+    fun getAllTopicDocuments(): Flow<List<TopicDocument>>
+
+    @Query("SELECT * FROM topic_documents ORDER BY timestamp DESC, id DESC")
+    suspend fun getAllTopicDocumentsDirect(): List<TopicDocument>
+
+    @Query("SELECT * FROM topic_documents WHERE topicId = :topicId ORDER BY timestamp DESC, id DESC")
+    fun getDocumentsForTopic(topicId: String): Flow<List<TopicDocument>>
+
+    @Query("SELECT * FROM topic_documents WHERE topicId = :topicId ORDER BY timestamp DESC, id DESC")
+    suspend fun getDocumentsForTopicDirect(topicId: String): List<TopicDocument>
+
+    @Query("SELECT * FROM topic_documents WHERE subjectId = :subjectId ORDER BY timestamp DESC, id DESC")
+    fun getDocumentsForSubject(subjectId: String): Flow<List<TopicDocument>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTopicDocument(doc: TopicDocument): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTopicDocuments(docs: List<TopicDocument>)
+
+    @Update
+    suspend fun updateTopicDocument(doc: TopicDocument)
+
+    @Delete
+    suspend fun deleteTopicDocument(doc: TopicDocument)
+
+    @Query("DELETE FROM topic_documents WHERE id = :id")
+    suspend fun deleteTopicDocumentById(id: Long)
+
+    @Query("DELETE FROM topic_documents WHERE topicId = :topicId")
+    suspend fun deleteDocumentsForTopic(topicId: String)
 
     // --- Chapters / Study ---
     @Query("SELECT * FROM chapters ORDER BY displayOrder ASC, chapterNumber ASC, id ASC")

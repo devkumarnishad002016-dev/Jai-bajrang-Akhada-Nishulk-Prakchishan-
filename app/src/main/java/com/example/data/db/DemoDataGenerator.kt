@@ -2,6 +2,12 @@ package com.example.data.db
 
 import com.example.data.model.*
 import com.example.util.StudentAuthManager
+import com.example.data.db.computer.ComputerQuestionBankData
+import com.example.data.db.english.EnglishQuestionBankData
+import com.example.data.db.gk.GkQuestionBankData
+import com.example.data.db.hindi.HindiQuestionBankData
+import com.example.data.db.math.MathQuestionBankData
+import com.example.data.db.reasoning.ReasoningQuestionBankData
 
 object DemoDataGenerator {
 
@@ -110,62 +116,102 @@ object DemoDataGenerator {
     fun getSampleStudySubjects(): List<StudySubject> = SyllabusStudyMaterialData.getSyllabusSubjects()
 
     fun getSampleStudyTopics(): List<StudyTopic> = listOf(
-        // गणित (Math)
-        StudyTopic(id = 1, topicId = "TOPIC_MATH_NUMSYS", subjectId = "SUB_MATH", topicName = "संख्या पद्धति (Number System)", displayOrder = 1, isActive = true, description = "प्राकृत, अभाज्य, भाज्यता नियम, इकाई अंक"),
-        StudyTopic(id = 2, topicId = "TOPIC_MATH_SIMP", subjectId = "SUB_MATH", topicName = "सरलीकरण (Simplification)", displayOrder = 2, isActive = true, description = "BODMAS, भिन्न, वर्गमूल एवं घनमूल"),
-        StudyTopic(id = 3, topicId = "TOPIC_MATH_PERCENT", subjectId = "SUB_MATH", topicName = "प्रतिशत (Percentage)", displayOrder = 3, isActive = true, description = "प्रतिशत वृद्धि, कमी, चुनाव, आय-व्यय"),
-        StudyTopic(id = 4, topicId = "TOPIC_MATH_PROFLOSS", subjectId = "SUB_MATH", topicName = "लाभ एवं हानि (Profit & Loss)", displayOrder = 4, isActive = true, description = "क्रय-विक्रय मूल्य, छूट (Discount)"),
-        StudyTopic(id = 5, topicId = "TOPIC_MATH_RATIO", subjectId = "SUB_MATH", topicName = "अनुपात एवं समानुपात (Ratio & Proportion)", displayOrder = 5, isActive = true, description = "सिक्के, साझेदारी, मिश्रण"),
-        StudyTopic(id = 6, topicId = "TOPIC_MATH_AVG", subjectId = "SUB_MATH", topicName = "औसत (Average)", displayOrder = 6, isActive = true, description = "संख्याओं का औसत, आयु सम्बन्धी औसत"),
-        StudyTopic(id = 7, topicId = "TOPIC_MATH_TIMEWORK", subjectId = "SUB_MATH", topicName = "समय और कार्य (Time & Work)", displayOrder = 7, isActive = true, description = "कार्यक्षमता, पाइप और टंकी"),
-        StudyTopic(id = 8, topicId = "TOPIC_MATH_TSD", subjectId = "SUB_MATH", topicName = "समय, चाल और दूरी (Time, Speed & Distance)", displayOrder = 8, isActive = true, description = "ट्रेन, नाव और धारा"),
-        StudyTopic(id = 9, topicId = "TOPIC_MATH_SI", subjectId = "SUB_MATH", topicName = "साधारण ब्याज (Simple Interest)", displayOrder = 9, isActive = true, description = "मूलधन, दर, समय एवं मिश्रधन"),
-        StudyTopic(id = 10, topicId = "TOPIC_MATH_CI", subjectId = "SUB_MATH", topicName = "चक्रवृद्धि ब्याज (Compound Interest)", displayOrder = 10, isActive = true, description = "वार्षिक, अर्द्धवार्षिक ब्याज"),
-        StudyTopic(id = 11, topicId = "TOPIC_MATH_ALG", subjectId = "SUB_MATH", topicName = "बीजगणित (Algebra)", displayOrder = 11, isActive = true, description = "सर्वसमिकाएं एवं समीकरण"),
-        StudyTopic(id = 12, topicId = "TOPIC_MATH_GEOM", subjectId = "SUB_MATH", topicName = "ज्यामिति (Geometry)", displayOrder = 12, isActive = true, description = "रेखा, कोण, त्रिभुज, वृत्त"),
-        StudyTopic(id = 13, topicId = "TOPIC_MATH_MENS", subjectId = "SUB_MATH", topicName = "क्षेत्रमिति (Mensuration 2D/3D)", displayOrder = 13, isActive = true, description = "क्षेत्रफल, परिमाप, आयतन"),
+        // गणित (Math) - विस्तृत टॉपिक्स व सब-टॉपिक्स (Number System subtopics: भाज्य, अभाज्य, सम, विषम, विभाज्यता, इकाई अंक आदि)
+        StudyTopic(id = 1, topicId = "TOPIC_MATH_NUMSYS_BASIC", subjectId = "SUB_MATH", topicName = "संख्या पद्धति: प्राकृत, पूर्ण एवं पूर्णांक", displayOrder = 1, isActive = true, description = "Natural, Whole & Integer numbers, संख्या रेखा, स्थानीय व जातीय मान"),
+        StudyTopic(id = 2, topicId = "TOPIC_MATH_NUMSYS_EVEN_ODD", subjectId = "SUB_MATH", topicName = "संख्या पद्धति: सम और विषम संख्याएँ", displayOrder = 2, isActive = true, description = "Even & Odd Numbers, योग, अंतर व गुणन के नियम, व्यापक रूप"),
+        StudyTopic(id = 3, topicId = "TOPIC_MATH_NUMSYS_PRIME", subjectId = "SUB_MATH", topicName = "संख्या पद्धति: अभाज्य एवं सह-अभाज्य संख्याएँ", displayOrder = 3, isActive = true, description = "Prime & Co-prime numbers (2, 3, 5, 7, 11...), 1-100 में 25 अभाज्य, जुड़वां अभाज्य"),
+        StudyTopic(id = 4, topicId = "TOPIC_MATH_NUMSYS_COMPOSITE", subjectId = "SUB_MATH", topicName = "संख्या पद्धति: भाज्य / संयुक्त संख्याएँ (Composite Numbers)", displayOrder = 4, isActive = true, description = "भाज्य संख्याएँ (4, 6, 8, 9, 10...), सबसे छोटी भाज्य = 4, 1 न भाज्य न अभाज्य"),
+        StudyTopic(id = 5, topicId = "TOPIC_MATH_NUMSYS_RATIONAL", subjectId = "SUB_MATH", topicName = "संख्या पद्धति: परिमेय, अपरिमेय एवं वास्तविक संख्याएँ", displayOrder = 5, isActive = true, description = "Rational & Irrational numbers, p/q रूप, शांत-अशांत आवर्ती दशमलव"),
+        StudyTopic(id = 6, topicId = "TOPIC_MATH_NUMSYS_DIVISIBILITY", subjectId = "SUB_MATH", topicName = "संख्या पद्धति: विभाज्यता के नियम (Divisibility Rules)", displayOrder = 6, isActive = true, description = "2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13 से विभाज्यता के अचूक नियम व प्रश्न"),
+        StudyTopic(id = 7, topicId = "TOPIC_MATH_NUMSYS_UNIT_DIGIT", subjectId = "SUB_MATH", topicName = "संख्या पद्धति: इकाई का अंक एवं शेषफल प्रमेय", displayOrder = 7, isActive = true, description = "Unit digit cycling rules, शेषफल प्रमेय: भाज्य = भाजक × भागफल + शेषफल"),
+        StudyTopic(id = 8, topicId = "TOPIC_MATH_NUMSYS_ZEROES", subjectId = "SUB_MATH", topicName = "संख्या पद्धति: शून्य की संख्या व गुणनखंड", displayOrder = 8, isActive = true, description = "Trailing Zeroes, गुणनखंडों की संख्या, विषम/सम गुणनखंड, अभाज्य गुणनखंड"),
+        StudyTopic(id = 9, topicId = "TOPIC_MATH_LCM_HCF", subjectId = "SUB_MATH", topicName = "लघुत्तम समापवर्त्य एवं महत्तम समापवर्तक (LCM & HCF)", displayOrder = 9, isActive = true, description = "LCM, HCF, भिन्नों का ल.स./म.स., दो संख्याओं का गुणनफल = LCM × HCF"),
+        StudyTopic(id = 10, topicId = "TOPIC_MATH_SIMP", subjectId = "SUB_MATH", topicName = "सरलीकरण (Simplification & BODMAS)", displayOrder = 10, isActive = true, description = "VBODMAS नियम, कोष्ठक, भिन्न, वर्गमूल एवं घनमूल"),
+        StudyTopic(id = 11, topicId = "TOPIC_MATH_PERCENT", subjectId = "SUB_MATH", topicName = "प्रतिशत (Percentage - Basic to Advanced)", displayOrder = 11, isActive = true, description = "प्रतिशत वृद्धि, कमी, चुनाव, परीक्षा उत्तीर्ण, आय-व्यय"),
+        StudyTopic(id = 12, topicId = "TOPIC_MATH_PROFLOSS", subjectId = "SUB_MATH", topicName = "लाभ, हानि एवं बट्टा (Profit, Loss & Discount)", displayOrder = 12, isActive = true, description = "क्रय मूल्य, विक्रय मूल्य, अंकित मूल्य, क्रमिक छूट (Successive Discount)"),
+        StudyTopic(id = 13, topicId = "TOPIC_MATH_RATIO", subjectId = "SUB_MATH", topicName = "अनुपात एवं समानुपात (Ratio & Proportion)", displayOrder = 13, isActive = true, description = "अनुपात, मध्यानुपाती, तृतीयानुपाती, चतुर्थानुपाती, सिक्के व थैली"),
+        StudyTopic(id = 14, topicId = "TOPIC_MATH_PARTNERSHIP", subjectId = "SUB_MATH", topicName = "साझेदारी एवं मिश्रण (Partnership & Mixture)", displayOrder = 14, isActive = true, description = "पूंजी और समय का अनुपात, पृथक्करण नियम (Alligation)"),
+        StudyTopic(id = 15, topicId = "TOPIC_MATH_AVG", subjectId = "SUB_MATH", topicName = "औसत एवं आयु संबंधी प्रश्न (Average & Ages)", displayOrder = 15, isActive = true, description = "संख्याओं का औसत, समूह में नए व्यक्ति का आना, आयु अनुपात"),
+        StudyTopic(id = 16, topicId = "TOPIC_MATH_TIMEWORK", subjectId = "SUB_MATH", topicName = "समय, कार्य एवं पाइप-टंकी (Time, Work & Pipes)", displayOrder = 16, isActive = true, description = "कार्यक्षमता (Efficiency), मिलकर कार्य, पाइप एवं टंकी"),
+        StudyTopic(id = 17, topicId = "TOPIC_MATH_TSD", subjectId = "SUB_MATH", topicName = "समय, चाल, दूरी एवं रेलगाड़ी (Speed, Distance & Trains)", displayOrder = 17, isActive = true, description = "सापेक्ष चाल, ट्रेन द्वारा खंभा/पुल पार करना, नाव एवं धारा"),
+        StudyTopic(id = 18, topicId = "TOPIC_MATH_SI", subjectId = "SUB_MATH", topicName = "साधारण ब्याज (Simple Interest - SI)", displayOrder = 18, isActive = true, description = "मूलधन, ब्याज दर, समय, गुना संबंधी प्रश्न, किश्त"),
+        StudyTopic(id = 19, topicId = "TOPIC_MATH_CI", subjectId = "SUB_MATH", topicName = "चक्रवृद्धि ब्याज (Compound Interest - CI)", displayOrder = 19, isActive = true, description = "वार्षिक व अर्द्धवार्षिक चक्रवृद्धि ब्याज, SI और CI का 2 व 3 वर्ष का अंतर"),
+        StudyTopic(id = 20, topicId = "TOPIC_MATH_ALG", subjectId = "SUB_MATH", topicName = "बीजगणित एवं सर्वसमिकाएं (Algebra)", displayOrder = 20, isActive = true, description = "बीजगणितीय सूत्र (a+b)², (a³+b³), रैखिक व द्विघात समीकरण"),
+        StudyTopic(id = 21, topicId = "TOPIC_MATH_MENS_2D", subjectId = "SUB_MATH", topicName = "क्षेत्रमिति 2D (Mensuration 2D - Area & Perimeter)", displayOrder = 21, isActive = true, description = "त्रिभुज, आयत, वर्ग, समचतुर्भुज, समलम्ब, वृत्त का क्षेत्रफल व परिमाप"),
+        StudyTopic(id = 22, topicId = "TOPIC_MATH_MENS_3D", subjectId = "SUB_MATH", topicName = "क्षेत्रमिति 3D (Mensuration 3D - Volume & Surface)", displayOrder = 22, isActive = true, description = "घन, घनाभ, बेलन, शंकु, गोला, अर्द्धगोला का आयतन व पृष्ठीय क्षेत्रफल"),
+        StudyTopic(id = 23, topicId = "TOPIC_MATH_TRIG", subjectId = "SUB_MATH", topicName = "त्रिकोणमिति एवं ऊँचाई-दूरी (Trigonometry)", displayOrder = 23, isActive = true, description = "sin, cos, tan मान, उन्नयन व अवनमन कोण, ऊँचाई और दूरी"),
 
         // रीजनिंग (Reasoning)
-        StudyTopic(id = 14, topicId = "TOPIC_REAS_CODING", subjectId = "SUB_REASONING", topicName = "कोडिंग-डिकोडिंग (Coding Decoding)", displayOrder = 1, isActive = true, description = "लेटर कोडिंग, नंबर कोडिंग, विपरीत अक्षर"),
-        StudyTopic(id = 15, topicId = "TOPIC_REAS_ANALOGY", subjectId = "SUB_REASONING", topicName = "सादृश्यता (Analogy)", displayOrder = 2, isActive = true, description = "शब्द, संख्या और अक्षर सादृश्यता"),
-        StudyTopic(id = 16, topicId = "TOPIC_REAS_CLASS", subjectId = "SUB_REASONING", topicName = "वर्गीकरण / विजातीय (Classification)", displayOrder = 3, isActive = true, description = "विषम शब्द, संख्या, अक्षर छांटना"),
-        StudyTopic(id = 17, topicId = "TOPIC_REAS_SERIES", subjectId = "SUB_REASONING", topicName = "श्रृंखला (Series Completion)", displayOrder = 4, isActive = true, description = "संख्या एवं वर्णमाला श्रृंखला"),
-        StudyTopic(id = 18, topicId = "TOPIC_REAS_BLOOD", subjectId = "SUB_REASONING", topicName = "रक्त संबंध (Blood Relation)", displayOrder = 5, isActive = true, description = "पारिवारिक संबंध, इशारे वाले प्रश्न"),
-        StudyTopic(id = 19, topicId = "TOPIC_REAS_DIR", subjectId = "SUB_REASONING", topicName = "दिशा एवं दूरी (Direction & Distance)", displayOrder = 6, isActive = true, description = "दिशा ज्ञान, पाइथागोरस दूरी"),
-        StudyTopic(id = 20, topicId = "TOPIC_REAS_RANK", subjectId = "SUB_REASONING", topicName = "क्रम व्यवस्था (Ranking & Order)", displayOrder = 7, isActive = true, description = "पंक्ति में स्थान निर्धारण"),
-        StudyTopic(id = 21, topicId = "TOPIC_REAS_SYLLOGISM", subjectId = "SUB_REASONING", topicName = "न्याय निगमन (Syllogism)", displayOrder = 8, isActive = true, description = "कथन और निष्कर्ष"),
-        StudyTopic(id = 22, topicId = "TOPIC_REAS_VENN", subjectId = "SUB_REASONING", topicName = "वेन आरेख (Venn Diagram)", displayOrder = 9, isActive = true, description = "समुच्चयों का संबंध निरूपण"),
-        StudyTopic(id = 23, topicId = "TOPIC_REAS_CLOCK_CAL", subjectId = "SUB_REASONING", topicName = "घड़ी एवं कैलेंडर (Clock & Calendar)", displayOrder = 10, isActive = true, description = "कोण, दर्पण समय, दिन ज्ञात करना"),
+        StudyTopic(id = 24, topicId = "TOPIC_REAS_CODING", subjectId = "SUB_REASONING", topicName = "कोडिंग-डिकोडिंग (Coding Decoding)", displayOrder = 1, isActive = true, description = "लेटर कोडिंग, नंबर कोडिंग, विपरीत अक्षर (Opposite Letters)"),
+        StudyTopic(id = 25, topicId = "TOPIC_REAS_ANALOGY", subjectId = "SUB_REASONING", topicName = "सादृश्यता (Analogy)", displayOrder = 2, isActive = true, description = "शब्द, संख्या और वर्णमाला सादृश्यता"),
+        StudyTopic(id = 26, topicId = "TOPIC_REAS_CLASS", subjectId = "SUB_REASONING", topicName = "वर्गीकरण / विजातीय (Classification)", displayOrder = 3, isActive = true, description = "विषम शब्द, विषम संख्या एवं अक्षर समूह छांटना"),
+        StudyTopic(id = 27, topicId = "TOPIC_REAS_SERIES", subjectId = "SUB_REASONING", topicName = "श्रृंखला परीक्षण (Series Completion)", displayOrder = 4, isActive = true, description = "संख्या श्रृंखला (अंतर, वर्ग, घन), अक्षर श्रृंखला"),
+        StudyTopic(id = 28, topicId = "TOPIC_REAS_BLOOD", subjectId = "SUB_REASONING", topicName = "रक्त संबंध (Blood Relation)", displayOrder = 5, isActive = true, description = "पारिवारिक वृक्ष, इशारे वाले प्रश्न, कोडेड संबंध"),
+        StudyTopic(id = 29, topicId = "TOPIC_REAS_DIR", subjectId = "SUB_REASONING", topicName = "दिशा एवं दूरी (Direction & Distance)", displayOrder = 6, isActive = true, description = "दिशा ज्ञान, प्रारंभिक बिंदु से दूरी, पाइथागोरस प्रमेय"),
+        StudyTopic(id = 30, topicId = "TOPIC_REAS_RANK", subjectId = "SUB_REASONING", topicName = "क्रम व्यवस्था (Ranking & Order)", displayOrder = 7, isActive = true, description = "पंक्ति में बाएं/दाएं स्थान, कुल व्यक्तियों की संख्या"),
+        StudyTopic(id = 31, topicId = "TOPIC_REAS_SYLLOGISM", subjectId = "SUB_REASONING", topicName = "न्याय निगमन (Syllogism)", displayOrder = 8, isActive = true, description = "कथन और निष्कर्ष (सभी, कुछ, कोई नहीं)"),
+        StudyTopic(id = 32, topicId = "TOPIC_REAS_VENN", subjectId = "SUB_REASONING", topicName = "वेन आरेख (Venn Diagram)", displayOrder = 9, isActive = true, description = "तीन वस्तुओं/वर्गों के बीच तार्किक संबंध"),
+        StudyTopic(id = 33, topicId = "TOPIC_REAS_CLOCK_CAL", subjectId = "SUB_REASONING", topicName = "घड़ी एवं कैलेंडर (Clock & Calendar)", displayOrder = 10, isActive = true, description = "सुइयों के बीच कोण, दर्पण प्रतिबिंब, वार/दिन ज्ञात करना"),
+        StudyTopic(id = 34, topicId = "TOPIC_REAS_DICE", subjectId = "SUB_REASONING", topicName = "पासा एवं घन (Dice & Cube)", displayOrder = 11, isActive = true, description = "मानक पासा, साधारण पासा, खुला पासा, विपरीत फलक"),
+        StudyTopic(id = 35, topicId = "TOPIC_REAS_NON_VERBAL", subjectId = "SUB_REASONING", topicName = "अशाब्दिक रीजनिंग (Non-Verbal & Figures)", displayOrder = 12, isActive = true, description = "दर्पण एवं जल प्रतिबिंब, कागज मोड़ना-काटना, छिपी आकृति"),
+        StudyTopic(id = 351, topicId = "TOPIC_REAS_MISSING", subjectId = "SUB_REASONING", topicName = "लुप्त पद एवं गणितीय संक्रियाएं (Missing Number & Math Ops)", displayOrder = 13, isActive = true, description = "मैट्रिक्स में लुप्त संख्या, गणितीय चिन्ह प्रतिस्थापन"),
 
-        // हिंदी (Hindi)
-        StudyTopic(id = 24, topicId = "TOPIC_HINDI_VARN", subjectId = "SUB_HINDI", topicName = "वर्णमाला एवं वर्तनी (Alphabet & Spelling)", displayOrder = 1, isActive = true, description = "स्वर, व्यंजन, अयोगवाह, शुद्ध वर्तनी"),
-        StudyTopic(id = 25, topicId = "TOPIC_HINDI_SANDHI", subjectId = "SUB_HINDI", topicName = "संधि एवं समास (Sandhi & Samas)", displayOrder = 2, isActive = true, description = "स्वर-व्यंजन संधि, समास के 6 भेद"),
-        StudyTopic(id = 26, topicId = "TOPIC_HINDI_VILOM", subjectId = "SUB_HINDI", topicName = "विलोम व पर्यायवाची (Synonyms & Antonyms)", displayOrder = 3, isActive = true, description = "समानार्थक एवं विपरीतार्थक शब्द संग्रह"),
-        StudyTopic(id = 27, topicId = "TOPIC_HINDI_MUHAVARE", subjectId = "SUB_HINDI", topicName = "मुहावरे एवं लोकोक्तियाँ (Idioms)", displayOrder = 4, isActive = true, description = "महत्वपूर्ण मुहावरे और कहावतें"),
-        StudyTopic(id = 28, topicId = "TOPIC_HINDI_VAKYA", subjectId = "SUB_HINDI", topicName = "वाक्य शुद्धि व अनेक शब्दों हेतु एक शब्द", displayOrder = 5, isActive = true, description = "One word substitution, Grammar"),
+        // सामान्य हिंदी (Hindi)
+        StudyTopic(id = 36, topicId = "TOPIC_HINDI_VARN", subjectId = "SUB_HINDI", topicName = "वर्णमाला एवं वर्तनी (Alphabet & Spelling)", displayOrder = 1, isActive = true, description = "स्वर, व्यंजन, अयोगवाह, अल्पप्राण-महाप्राण, शुद्ध वर्तनी"),
+        StudyTopic(id = 37, topicId = "TOPIC_HINDI_SANDHI", subjectId = "SUB_HINDI", topicName = "संधि (Sandhi - स्वर, व्यंजन, विसर्ग)", displayOrder = 2, isActive = true, description = "स्वर संधि के 5 भेद, व्यंजन संधि व विसर्ग संधि के नियम"),
+        StudyTopic(id = 38, topicId = "TOPIC_HINDI_SAMAS", subjectId = "SUB_HINDI", topicName = "समास (Samas - समस्त पद व विग्रह)", displayOrder = 3, isActive = true, description = "अव्ययीभाव, तत्पुरुष, कर्मधारय, द्विगु, द्वन्द्व, बहुव्रीहि"),
+        StudyTopic(id = 39, topicId = "TOPIC_HINDI_VILOM", subjectId = "SUB_HINDI", topicName = "विलोम व पर्यायवाची शब्द (Synonyms & Antonyms)", displayOrder = 4, isActive = true, description = "परीक्षा उपयोगी 200+ विलोम एवं पर्यायवाची शब्द संग्रह"),
+        StudyTopic(id = 40, topicId = "TOPIC_HINDI_MUHAVARE", subjectId = "SUB_HINDI", topicName = "मुहावरे एवं लोकोक्तियाँ (Idioms & Proverbs)", displayOrder = 5, isActive = true, description = "सेना व पुलिस भर्ती में बार-बार पूछे जाने वाले मुहावरे"),
+        StudyTopic(id = 41, topicId = "TOPIC_HINDI_ONEWORD", subjectId = "SUB_HINDI", topicName = "अनेक शब्दों के लिए एक शब्द (One Word)", displayOrder = 6, isActive = true, description = "वाक्यांश के लिए एक शब्द का संपूर्ण संग्रह"),
+        StudyTopic(id = 42, topicId = "TOPIC_HINDI_SHUDDHI", subjectId = "SUB_HINDI", topicName = "वाक्य शुद्धि एवं त्रुटि पहचान", displayOrder = 7, isActive = true, description = "लिंग, वचन, कारक, काल संबंधी अशुद्धियाँ व संशोधन"),
+        StudyTopic(id = 43, topicId = "TOPIC_HINDI_TAT_TAD", subjectId = "SUB_HINDI", topicName = "तत्सम एवं तद्भव शब्द (Tatsam & Tadbhav)", displayOrder = 8, isActive = true, description = "संस्कृत मूल (तत्सम) व हिंदी रूपांतरण (तद्भव)"),
 
-        // English
-        StudyTopic(id = 29, topicId = "TOPIC_ENG_PARTS", subjectId = "SUB_ENGLISH", topicName = "Parts of Speech", displayOrder = 1, isActive = true, description = "Noun, Pronoun, Adjective, Verb, Preposition"),
-        StudyTopic(id = 30, topicId = "TOPIC_ENG_TENSES", subjectId = "SUB_ENGLISH", topicName = "Tenses & Verb Agreement", displayOrder = 2, isActive = true, description = "Present, Past, Future, Subject-Verb Agreement"),
-        StudyTopic(id = 31, topicId = "TOPIC_ENG_VOCAB", subjectId = "SUB_ENGLISH", topicName = "Synonyms & Antonyms", displayOrder = 3, isActive = true, description = "Important Defence exam vocabulary"),
-        StudyTopic(id = 32, topicId = "TOPIC_ENG_IDIOMS", subjectId = "SUB_ENGLISH", topicName = "Idioms & One Word Substitution", displayOrder = 4, isActive = true, description = "Phrases, Common expressions"),
-        StudyTopic(id = 33, topicId = "TOPIC_ENG_ERRORS", subjectId = "SUB_ENGLISH", topicName = "Spotting Errors & Fill in the Blanks", displayOrder = 5, isActive = true, description = "Sentence correction & articles"),
+        // अंग्रेजी (English Language - सम्पूर्ण टॉपिक्स व सब-टॉपिक्स)
+        StudyTopic(id = 44, topicId = "TOPIC_ENG_PARTS", subjectId = "SUB_ENGLISH", topicName = "Parts of Speech (8 शब्द भेद की पहचान)", displayOrder = 1, isActive = true, description = "Noun, Pronoun, Verb, Adverb, Adjective, Preposition, Conjunction, Interjection"),
+        StudyTopic(id = 45, topicId = "TOPIC_ENG_NOUN", subjectId = "SUB_ENGLISH", topicName = "Noun & Its Classification (संज्ञा एवं भेद)", displayOrder = 2, isActive = true, description = "Proper, Common, Collective, Abstract, Material, Singular/Plural, Apostrophe ('s)"),
+        StudyTopic(id = 46, topicId = "TOPIC_ENG_PRONOUN", subjectId = "SUB_ENGLISH", topicName = "Pronoun & Agreement Rules (सर्वनाम)", displayOrder = 3, isActive = true, description = "Personal (Order 231/123), Relative (Who/Whom/That), Reflexive Pronouns"),
+        StudyTopic(id = 47, topicId = "TOPIC_ENG_TENSES", subjectId = "SUB_ENGLISH", topicName = "Tenses & Time (काल एवं वाक्य संरचना)", displayOrder = 4, isActive = true, description = "Present, Past, Future Structures, Signal Words & Conditional Sentences"),
+        StudyTopic(id = 48, topicId = "TOPIC_ENG_VERB_AGREEMENT", subjectId = "SUB_ENGLISH", topicName = "Subject-Verb Agreement (कर्त्ता-क्रिया सामंजस्य)", displayOrder = 5, isActive = true, description = "Syntax के 15 स्वर्णिम नियम, As well as, Either/Or, Neither/Nor, Each of"),
+        StudyTopic(id = 49, topicId = "TOPIC_ENG_PREPOSITIONS", subjectId = "SUB_ENGLISH", topicName = "Prepositions & Usage (पूर्वसर्ग नियम)", displayOrder = 6, isActive = true, description = "At, In, On, Into, Onto, Between, Among, Beside, Besides, Since, For"),
+        StudyTopic(id = 50, topicId = "TOPIC_ENG_FIXED_PREP", subjectId = "SUB_ENGLISH", topicName = "Fixed Prepositions (निश्चित पूर्वसर्ग संग्रह)", displayOrder = 7, isActive = true, description = "Senior to, Abstain from, Died of, Accused of, Good at, Rely on"),
+        StudyTopic(id = 51, topicId = "TOPIC_ENG_ARTICLES", subjectId = "SUB_ENGLISH", topicName = "Articles & Determiners (A, An, The एवं लोप नियम)", displayOrder = 8, isActive = true, description = "A vs An (हिंदी स्वर उच्चारण), The का प्रयोग, Omission of Articles"),
+        StudyTopic(id = 52, topicId = "TOPIC_ENG_VOICE", subjectId = "SUB_ENGLISH", topicName = "Active & Passive Voice (वाच्य परिवर्तन)", displayOrder = 9, isActive = true, description = "Tense transformation chart, Modals voice, Imperative sentences (Let/Advice)"),
+        StudyTopic(id = 53, topicId = "TOPIC_ENG_NARRATION", subjectId = "SUB_ENGLISH", topicName = "Direct & Indirect Speech / Narration (कथन)", displayOrder = 10, isActive = true, description = "Reporting verb past rules, Pronoun shift (SON/123), Tense & time words shift"),
+        StudyTopic(id = 54, topicId = "TOPIC_ENG_ADJECTIVES", subjectId = "SUB_ENGLISH", topicName = "Adjectives & Degrees of Comparison (विशेषण)", displayOrder = 11, isActive = true, description = "Positive, Comparative, Superlative, Latin adjectives (+to), Little vs Few"),
+        StudyTopic(id = 55, topicId = "TOPIC_ENG_ADVERBS", subjectId = "SUB_ENGLISH", topicName = "Adverbs & Law of Inversion (क्रियाविशेषण)", displayOrder = 12, isActive = true, description = "M-P-T order, Frequency adverbs, Inversion after Hardly/Scarcely/No sooner"),
+        StudyTopic(id = 56, topicId = "TOPIC_ENG_CONJUNCTIONS", subjectId = "SUB_ENGLISH", topicName = "Conjunctions & Connectors (संयोजक शब्द)", displayOrder = 13, isActive = true, description = "Correlative pairs (Neither...nor, Either...or, Not only...but also, Lest...should)"),
+        StudyTopic(id = 57, topicId = "TOPIC_ENG_SYNONYMS", subjectId = "SUB_ENGLISH", topicName = "High Frequency Synonyms (समानार्थी शब्द)", displayOrder = 14, isActive = true, description = "सेना एवं पुलिस भर्ती परीक्षा के 100+ महत्वपूर्ण Synonyms हिंदी अर्थ सहित"),
+        StudyTopic(id = 58, topicId = "TOPIC_ENG_ANTONYMS", subjectId = "SUB_ENGLISH", topicName = "High Frequency Antonyms (विलोम शब्द)", displayOrder = 15, isActive = true, description = "सेना एवं पुलिस भर्ती परीक्षा के 100+ महत्वपूर्ण Antonyms हिंदी अर्थ सहित"),
+        StudyTopic(id = 59, topicId = "TOPIC_ENG_ONE_WORD", subjectId = "SUB_ENGLISH", topicName = "One Word Substitution (अनेक शब्दों हेतु एक शब्द)", displayOrder = 16, isActive = true, description = "Top 100+ One Word Substitutions with Hindi explanations"),
+        StudyTopic(id = 60, topicId = "TOPIC_ENG_IDIOMS", subjectId = "SUB_ENGLISH", topicName = "Idioms & Phrases (मुहावरे एवं लोकोक्तियाँ)", displayOrder = 17, isActive = true, description = "Everyday and exam idioms: Piece of cake, Once in a blue moon, Spill the beans"),
+        StudyTopic(id = 61, topicId = "TOPIC_ENG_SPOTTING_ERRORS", subjectId = "SUB_ENGLISH", topicName = "Spotting Errors & Sentence Correction", displayOrder = 18, isActive = true, description = "Grammar error detection, subject-verb, articles, prepositions and modifiers"),
+        StudyTopic(id = 62, topicId = "TOPIC_ENG_SPELLING", subjectId = "SUB_ENGLISH", topicName = "Spelling Test & Misspelt Words (शुद्ध वर्तनी)", displayOrder = 19, isActive = true, description = "Frequently misspelled words in defence exams (Lieutenant, Accommodate, Guarantee)"),
+        StudyTopic(id = 63, topicId = "TOPIC_ENG_FILL_BLANKS", subjectId = "SUB_ENGLISH", topicName = "Fill in the Blanks & Cloze Test", displayOrder = 20, isActive = true, description = "Grammar and vocabulary based blanks, contextual reading comprehension"),
 
         // सामान्य ज्ञान (GK)
-        StudyTopic(id = 34, topicId = "TOPIC_GK_HISTORY", subjectId = "SUB_GK", topicName = "भारतीय इतिहास व स्वतंत्रता संग्राम", displayOrder = 1, isActive = true, description = "प्राचीन, मध्यकालीन व आधुनिक भारत"),
-        StudyTopic(id = 35, topicId = "TOPIC_GK_GEOGRAPHY", subjectId = "SUB_GK", topicName = "भारत एवं विश्व का भूगोल", displayOrder = 2, isActive = true, description = "नदियां, पर्वत, राष्ट्रीय उद्यान, खनिज"),
-        StudyTopic(id = 36, topicId = "TOPIC_GK_POLITY", subjectId = "SUB_GK", topicName = "भारतीय संविधान एवं राजव्यवस्था", displayOrder = 3, isActive = true, description = "मौलिक अधिकार, राष्ट्रपति, संसद, अनुच्छेद"),
-        StudyTopic(id = 37, topicId = "TOPIC_GK_STATE", subjectId = "SUB_GK", topicName = "राज्य सामान्य ज्ञान (CG / All State)", displayOrder = 4, isActive = true, description = "राज्य की संस्कृति, नदियां, प्रमुख स्थल"),
+        StudyTopic(id = 64, topicId = "TOPIC_GK_HISTORY", subjectId = "SUB_GK", topicName = "भारतीय इतिहास व स्वतंत्रता संग्राम", displayOrder = 1, isActive = true, description = "प्राचीन, मध्यकालीन व 1857 की क्रांति, गांधी युग व स्वतंत्रता"),
+        StudyTopic(id = 65, topicId = "TOPIC_GK_GEOGRAPHY", subjectId = "SUB_GK", topicName = "भारत एवं विश्व का भूगोल", displayOrder = 2, isActive = true, description = "नदियां, पर्वत, दर्रे, राष्ट्रीय उद्यान, खनिज संपदा व जलवायु"),
+        StudyTopic(id = 66, topicId = "TOPIC_GK_POLITY", subjectId = "SUB_GK", topicName = "भारतीय संविधान एवं राजव्यवस्था", displayOrder = 3, isActive = true, description = "प्रस्तावना, मौलिक अधिकार व कर्तव्य, राष्ट्रपति, संसद, अनुच्छेद"),
+        StudyTopic(id = 67, topicId = "TOPIC_GK_SCIENCE", subjectId = "SUB_GK", topicName = "सामान्य विज्ञान (Physics, Chem, Bio)", displayOrder = 4, isActive = true, description = "SI मात्रक, प्रकाश, रासायनिक सूत्र, मानव शरीर, विटामिन, रोग"),
+        StudyTopic(id = 68, topicId = "TOPIC_GK_DEFENSE", subjectId = "SUB_GK", topicName = "भारतीय सेना व रक्षा प्रणाली (Defence GK)", displayOrder = 5, isActive = true, description = "थल/वायु/नौसेना कमान, रैंक संरचना, मिसाइल, तोपखाने, युद्धपोत"),
+        StudyTopic(id = 78, topicId = "TOPIC_GK_ECONOMY", subjectId = "SUB_GK", topicName = "भारतीय अर्थव्यवस्था एवं बैंकिंग", displayOrder = 6, isActive = true, description = "GDP, पंचवर्षीय योजनाएं, बजट, कर व्यवस्था, RBI व मुद्रास्फीति"),
+        StudyTopic(id = 79, topicId = "TOPIC_GK_ENVIRONMENT", subjectId = "SUB_GK", topicName = "पर्यावरण, पारिस्थितिकी एवं जैव विविधता", displayOrder = 7, isActive = true, description = "पारिस्थितिक तंत्र, खाद्य श्रृंखला, रामसर साइट्स, प्रदूषण व राष्ट्रीय उद्यान"),
+        StudyTopic(id = 80, topicId = "TOPIC_GK_COMPUTER", subjectId = "SUB_GK", topicName = "कंप्यूटर एवं सूचना प्रौद्योगिकी (GK)", displayOrder = 8, isActive = true, description = "हार्डवेयर, सॉफ्टवेयर, इंटरनेट, साइबर सुरक्षा व तकनीकी शब्दावली"),
+        StudyTopic(id = 81, topicId = "TOPIC_GK_SPORTS", subjectId = "SUB_GK", topicName = "खेलकूद, कप/ट्रॉफियां एवं पुरस्कार", displayOrder = 9, isActive = true, description = "ओलंपिक, क्रिकेट विश्व कप, एशियाई खेल, कप/ट्रॉफियां, भारत रत्न व नोबेल"),
+        StudyTopic(id = 82, topicId = "TOPIC_GK_STATIC", subjectId = "SUB_GK", topicName = "विविध सामान्य ज्ञान एवं तथ्य (Static GK)", displayOrder = 10, isActive = true, description = "भारत व विश्व में प्रथम, सबसे बड़ा/छोटा/लंबा, उपनाम, प्रमुख स्मारक व संस्थान"),
 
-        // सामान्य विज्ञान (GS)
-        StudyTopic(id = 38, topicId = "TOPIC_GS_PHYSICS", subjectId = "SUB_GS", topicName = "भौतिक विज्ञान (Physics)", displayOrder = 1, isActive = true, description = "SI मात्रक, गति, बल, कार्य, ऊर्जा, प्रकाश"),
-        StudyTopic(id = 39, topicId = "TOPIC_GS_CHEMISTRY", subjectId = "SUB_GS", topicName = "रसायन विज्ञान (Chemistry)", displayOrder = 2, isActive = true, description = "तत्व, यौगिक, अम्ल-क्षार, रासायनिक सूत्र"),
-        StudyTopic(id = 40, topicId = "TOPIC_GS_BIOLOGY", subjectId = "SUB_GS", topicName = "जीव विज्ञान व मानव शरीर (Biology)", displayOrder = 3, isActive = true, description = "विटामिन, रोग, रक्त परिसंचरण, पाचन तंत्र"),
+        // कंप्यूटर ज्ञान (Computer)
+        StudyTopic(id = 69, topicId = "TOPIC_COMP_BASICS", subjectId = "SUB_COMPUTER", topicName = "कंप्यूटर परिचय एवं हार्डवेयर/सॉफ्टवेयर", displayOrder = 1, isActive = true, description = "इनपुट/आउटपुट डिवाइसेस, CPU, RAM/ROM, मेमोरी मात्रक"),
+        StudyTopic(id = 70, topicId = "TOPIC_COMP_OFFICE", subjectId = "SUB_COMPUTER", topicName = "MS Office (Word, Excel, PowerPoint)", displayOrder = 2, isActive = true, description = "डॉक्यूमेंट निर्माण, फॉर्मूला, स्लाइड एवं शॉर्टकट कुंजियाँ"),
+        StudyTopic(id = 71, topicId = "TOPIC_COMP_INTERNET", subjectId = "SUB_COMPUTER", topicName = "इंटरनेट, साइबर सुरक्षा एवं फुल फॉर्म्स", displayOrder = 3, isActive = true, description = "LAN/WAN, IP, WWW, वायरस-फ़ायरवॉल व 50+ संक्षिप्त नाम (Full Forms)"),
+        StudyTopic(id = 72, topicId = "TOPIC_COMP_SOFTWARE", subjectId = "SUB_COMPUTER", topicName = "ऑपरेटिंग सिस्टम एवं सॉफ्टवेयर", displayOrder = 4, isActive = true, description = "सिस्टम सॉफ्टवेयर, एप्लीकेशन सॉफ्टवेयर, विंडोज एवं लिनक्स"),
+        StudyTopic(id = 73, topicId = "TOPIC_COMP_NETWORKING", subjectId = "SUB_COMPUTER", topicName = "नेटवर्किंग एवं डेटा संचार", displayOrder = 5, isActive = true, description = "टोपोलॉजी, राउटर, मॉडम, प्रोटोकॉल (TCP/IP, HTTP)"),
+        StudyTopic(id = 74, topicId = "TOPIC_COMP_SECURITY", subjectId = "SUB_COMPUTER", topicName = "साइबर सुरक्षा एवं मालवेयर", displayOrder = 6, isActive = true, description = "एंटीवायरस, फ़ायरवॉल, फ़िशिंग, क्रिप्टोग्राफी एवं सुरक्षा"),
 
-        // करेंट अफेयर्स (Current Affairs)
-        StudyTopic(id = 41, topicId = "TOPIC_CA_NATIONAL", subjectId = "SUB_CURRENT_AFFAIRS", topicName = "राष्ट्रीय एवं अंतर्राष्ट्रीय घटनाक्रम", displayOrder = 1, isActive = true, description = "नवीनतम योजनाएं, सम्मेलन, प्रमुख घटनाएं"),
-        StudyTopic(id = 42, topicId = "TOPIC_CA_SPORTS", subjectId = "SUB_CURRENT_AFFAIRS", topicName = "खेलकूद, पुरस्कार एवं सम्मान", displayOrder = 2, isActive = true, description = "ओलंपिक, क्रिकेट, भारत रत्न, वीरता पुरस्कार"),
-        StudyTopic(id = 43, topicId = "TOPIC_CA_DEFENSE", subjectId = "SUB_CURRENT_AFFAIRS", topicName = "सैन्य अभ्यास एवं रक्षा नियुक्तियां", displayOrder = 3, isActive = true, description = "CDS, थल/वायु/नौसेना अभ्यास, मिसाइल परीक्षण")
+        // अतिरिक्त गणित विशिष्ट टॉपिक्स (Math Question Bank Topic IDs)
+        StudyTopic(id = 75, topicId = "TOPIC_MATH_NUMSYS", subjectId = "SUB_MATH", topicName = "संख्या पद्धति (विविध प्रश्न)", displayOrder = 24, isActive = true, description = "संख्याओं पर आधारित विविध एवं परीक्षोपयोगी प्रश्न"),
+        StudyTopic(id = 76, topicId = "TOPIC_MATH_INTEREST", subjectId = "SUB_MATH", topicName = "ब्याज (साधारण एवं चक्रवृद्धि ब्याज)", displayOrder = 25, isActive = true, description = "SI और CI के संयुक्त प्रश्न, दर, समय व मिश्रधन"),
+        StudyTopic(id = 77, topicId = "TOPIC_MATH_SPEEDTRAIN", subjectId = "SUB_MATH", topicName = "चाल, समय, दूरी, रेलगाड़ी व क्षेत्रमिति", displayOrder = 26, isActive = true, description = "ट्रेन, चाल, दूरी, आयत, वर्ग, वृत्त एवं त्रिविमीय क्षेत्रमिति प्रश्न")
     )
 
     fun getSampleQuestions(): List<Question> = listOf(
@@ -643,8 +689,134 @@ object DemoDataGenerator {
             language = "English",
             isActive = true,
             createdDate = "2026-08-22"
+        ),
+        Question(
+            id = 23,
+            questionId = "Q_MATH_COMP_001",
+            subjectId = "SUB_MATH",
+            topicId = "TOPIC_MATH_NUMSYS_COMPOSITE",
+            chapterId = 1,
+            subjectName = "गणित",
+            chapterName = "संख्या पद्धति (Number System)",
+            questionText = "सबसे छोटी भाज्य (Composite Number) संख्या कौन सी है?",
+            optionA = "1",
+            optionB = "2",
+            optionC = "4",
+            optionD = "6",
+            correctOption = 2,
+            correctOptionLetter = "C",
+            explanation = "सबसे छोटी भाज्य संख्या 4 है (जिसके 1 और स्वयं के अलावा भी गुणनखंड हों: 1, 2, 4)। 1 न भाज्य है न अभाज्य। 2 सबसे छोटी अभाज्य संख्या है।",
+            difficulty = "आसान",
+            language = "Hindi",
+            isActive = true,
+            createdDate = "2026-08-22"
+        ),
+        Question(
+            id = 24,
+            questionId = "Q_MATH_PRIME_001",
+            subjectId = "SUB_MATH",
+            topicId = "TOPIC_MATH_NUMSYS_PRIME",
+            chapterId = 1,
+            subjectName = "गणित",
+            chapterName = "संख्या पद्धति (Number System)",
+            questionText = "1 से 50 के बीच कुल कितनी अभाज्य (Prime) संख्याएँ होती हैं?",
+            optionA = "10",
+            optionB = "15",
+            optionC = "18",
+            optionD = "25",
+            correctOption = 1,
+            correctOptionLetter = "B",
+            explanation = "1 से 50 के बीच 15 अभाज्य संख्याएँ (2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47) होती हैं, और 1 से 100 के बीच कुल 25 होती हैं।",
+            difficulty = "मध्यम",
+            language = "Hindi",
+            isActive = true,
+            createdDate = "2026-08-22"
+        ),
+        Question(
+            id = 25,
+            questionId = "Q_MATH_DIV_001",
+            subjectId = "SUB_MATH",
+            topicId = "TOPIC_MATH_NUMSYS_DIVISIBILITY",
+            chapterId = 1,
+            subjectName = "गणित",
+            chapterName = "संख्या पद्धति (Number System)",
+            questionText = "यदि संख्या 78*964, 11 से पूर्णतः विभाज्य हो, तो तारांकन (*) के स्थान पर कौन सा अंक आएगा?",
+            optionA = "1",
+            optionB = "4",
+            optionC = "5",
+            optionD = "7",
+            correctOption = 2,
+            correctOptionLetter = "C",
+            explanation = "11 की विभाज्यता नियम: विषम स्थानों का योग = 4 + 9 + 8 = 21। सम स्थानों का योग = 6 + * + 7 = 13 + *। अंतर = 21 - (13 + *) = 8 - * = 0 => * = 8 या 8 - * = 11 से * = 5 लेने पर 21 - (13+5) = 3 (अथवा (4+9+8) - (6+*+7) = 21 - 13 - * = 8 - * = 0 => * = 8)।",
+            difficulty = "मध्यम",
+            language = "Hindi",
+            isActive = true,
+            createdDate = "2026-08-22"
+        ),
+        Question(
+            id = 26,
+            questionId = "Q_ENG_003",
+            subjectId = "SUB_ENGLISH",
+            topicId = "TOPIC_ENG_FIXED_PREP",
+            chapterId = 69,
+            subjectName = "English",
+            chapterName = "Prepositions & Fixed Prepositions",
+            questionText = "He is senior _______ me in service.",
+            optionA = "than",
+            optionB = "to",
+            optionC = "from",
+            optionD = "with",
+            correctOption = 1,
+            correctOptionLetter = "B",
+            explanation = "Latin comparative adjectives ending in '-ior' (senior, junior, superior, inferior) take 'to', not 'than'.",
+            difficulty = "आसान",
+            language = "English",
+            isActive = true,
+            createdDate = "2026-08-22"
+        ),
+        Question(
+            id = 27,
+            questionId = "Q_ENG_004",
+            subjectId = "SUB_ENGLISH",
+            topicId = "TOPIC_ENG_VERB_AGREEMENT",
+            chapterId = 68,
+            subjectName = "English",
+            chapterName = "Subject-Verb Agreement",
+            questionText = "The Captain, along with his soldiers, _______ marching on the ground.",
+            optionA = "were",
+            optionB = "is",
+            optionC = "are",
+            optionD = "have been",
+            correctOption = 1,
+            correctOptionLetter = "B",
+            explanation = "When subjects are joined by 'along with', 'with', 'as well as', the verb agrees with the first subject ('The Captain' - singular).",
+            difficulty = "मध्यम",
+            language = "English",
+            isActive = true,
+            createdDate = "2026-08-22"
+        ),
+        Question(
+            id = 28,
+            questionId = "Q_ENG_005",
+            subjectId = "SUB_ENGLISH",
+            topicId = "TOPIC_ENG_ONE_WORD",
+            chapterId = 78,
+            subjectName = "English",
+            chapterName = "One Word Substitution & Idioms",
+            questionText = "One who looks at the bright side of things is called an:",
+            optionA = "Pessimist",
+            optionB = "Optimist",
+            optionC = "Atheist",
+            optionD = "Altruist",
+            correctOption = 1,
+            correctOptionLetter = "B",
+            explanation = "An 'Optimist' (आशावादी) is a person who always looks at the positive or bright aspect of things.",
+            difficulty = "आसान",
+            language = "English",
+            isActive = true,
+            createdDate = "2026-08-22"
         )
-    )
+    ) + ComputerQuestionBankData.getAll400ComputerQuestions() + MathQuestionBankData.getAll400MathQuestions() + ReasoningQuestionBankData.getAll400ReasoningQuestions() + HindiQuestionBankData.getAll400HindiQuestions() + EnglishQuestionBankData.getAll400EnglishQuestions() + GkQuestionBankData.getAll2000GkQuestions()
 
     fun getSampleStudyAttempts(): List<StudyAttempt> = emptyList()
 
@@ -697,7 +869,7 @@ object DemoDataGenerator {
         Notice(
             id = 1,
             title = "ग्राउंड टाइमिंग में विशेष बदलाव (विशेष 1600m ट्रायल)",
-            content = "सभी कैडेट्स ध्यान दें: कल सुबह 5:00 बजे मौरिकला ग्राउंड पर सेना भर्ती 1600 मीटर का आधिकारिक टाइम ट्रायल आयोजित होगा। सभी छात्र अपने रनिंग शूज व चेस्ट नंबर के साथ 4:45 AM तक उपस्थित हों।",
+            content = "सभी कैडेट्स ध्यान दें: कल सुबह 5:00 बजे मौरीकला (गुफा) ग्राउंड पर सेना भर्ती 1600 मीटर का आधिकारिक टाइम ट्रायल आयोजित होगा। सभी छात्र अपने रनिंग शूज व चेस्ट नंबर के साथ 4:45 AM तक उपस्थित हों।",
             category = "प्रशिक्षण",
             date = "2026-08-22",
             author = "उस्ताद राम सिंह (मुख्य प्रशिक्षक)",
@@ -736,7 +908,7 @@ object DemoDataGenerator {
             content = "गाँव से सेना–पुलिस भर्ती अभियान के तहत आगामी शनिवार को सभी नए व पुराने छात्रों के लिए हाइट, चेस्ट और वजन का फ्री मेडिकल चेकअप कैंप लगाया जाएगा।",
             category = "सामान्य",
             date = "2026-08-17",
-            author = "संचालक मंडल, मौरिकला गुफा",
+            author = "संचालक मंडल, मौरीकला (गुफा)",
             isUrgent = false,
             priority = "NORMAL",
             isPinned = false,
@@ -912,7 +1084,7 @@ object DemoDataGenerator {
             id = 2,
             notificationId = "notif_002_morning_trials",
             title = "🏃 कल प्रातः 1600m स्पीड ट्रायल व बीम टेस्ट",
-            message = "कल सुबह ठीक 05:15 बजे मौरिकला ग्राउंड पर 1600m का साप्ताहिक फाइनल टाइम ट्रायल होगा। सभी कैडेट्स समय पर वार्म-अप किट के साथ उपस्थित रहें।",
+            message = "कल सुबह ठीक 05:15 बजे मौरीकला (गुफा) ग्राउंड पर 1600m का साप्ताहिक फाइनल टाइम ट्रायल होगा। सभी कैडेट्स समय पर वार्म-अप किट के साथ उपस्थित रहें।",
             category = AppNotification.CATEGORY_TRAINING_REMINDER,
             senderId = "TR-001",
             senderName = "देव कुमार निषाद (मुख्य कोच)",
@@ -972,6 +1144,119 @@ object DemoDataGenerator {
             timestamp = System.currentTimeMillis() - 1000 * 60 * 60 * 48,
             dateFormatted = "2 दिन पहले",
             isRead = false
+        )
+    )
+
+    fun getSampleTopicDocuments(): List<TopicDocument> = listOf(
+        TopicDocument(
+            id = 1,
+            topicId = "TOPIC_MATH_NUMSYS_BASIC",
+            subjectId = "SUB_MATH",
+            title = "संख्या पद्धति आधारभूत सूत्र एवं ट्रिक्स (Formula Booklet)",
+            fileName = "Math_Number_System_Formulae.pdf",
+            fileType = "PDF",
+            fileSize = "420 KB",
+            uploadDate = "2026-09-10",
+            description = "प्राकृत, पूर्ण, पूर्णांक, स्थानीय व जातीय मान के अचूक सूत्र व शॉर्टकट कुंजियां"
+        ),
+        TopicDocument(
+            id = 2,
+            topicId = "TOPIC_MATH_NUMSYS_BASIC",
+            subjectId = "SUB_MATH",
+            title = "संख्या पद्धति 50 अभ्यास प्रश्न डेटा शीट",
+            fileName = "Math_Number_System_50_Practice.xlsx",
+            fileType = "EXCEL",
+            fileSize = "180 KB",
+            uploadDate = "2026-09-10",
+            description = "संख्या पद्धति के 50 चुनिंदा प्रश्न व उत्तर कुंजी स्प्रेडशीट"
+        ),
+        TopicDocument(
+            id = 3,
+            topicId = "TOPIC_GK_HISTORY",
+            subjectId = "SUB_GK",
+            title = "भारतीय इतिहास एवं 1857 की क्रांति सार संग्रह नोट्स",
+            fileName = "Indian_History_Handwritten_Notes.pdf",
+            fileType = "PDF",
+            fileSize = "850 KB",
+            uploadDate = "2026-09-09",
+            description = "प्राचीन, मध्यकालीन एवं स्वतंत्रता संग्राम के कालक्रम व महत्वपूर्ण युद्ध"
+        ),
+        TopicDocument(
+            id = 4,
+            topicId = "TOPIC_GK_HISTORY",
+            subjectId = "SUB_GK",
+            title = "भारतीय इतिहास 100 वस्तुनिष्ठ प्रश्न व समाधान शीट",
+            fileName = "History_Top_100_MCQ_Bank.xlsx",
+            fileType = "EXCEL",
+            fileSize = "240 KB",
+            uploadDate = "2026-09-09",
+            description = "इतिहास के पिछले 10 वर्षों में पूछे गए 100 बहुविकल्पीय प्रश्न तालिका"
+        ),
+        TopicDocument(
+            id = 5,
+            topicId = "TOPIC_GK_GEOGRAPHY",
+            subjectId = "SUB_GK",
+            title = "भारत का भूगोल: नदियां, पर्वत व दर्रे मैप गाइड",
+            fileName = "Indian_Geography_Atlas_Notes.pdf",
+            fileType = "PDF",
+            fileSize = "1.2 MB",
+            uploadDate = "2026-09-08",
+            description = "गंगा, सिंधु, ब्रह्मपुत्र तंत्र, प्रमुख हिमालयी दर्रे एवं राष्ट्रीय उद्यान"
+        ),
+        TopicDocument(
+            id = 6,
+            topicId = "TOPIC_GK_GEOGRAPHY",
+            subjectId = "SUB_GK",
+            title = "भारत के राष्ट्रीय उद्यान व वन्यजीव अभयारण्य सूची",
+            fileName = "National_Parks_Wildlife_Sheet.xlsx",
+            fileType = "EXCEL",
+            fileSize = "165 KB",
+            uploadDate = "2026-09-08",
+            description = "राज्यवार राष्ट्रीय उद्यान, प्रोजेक्ट टाइगर रिजर्व व रामसर स्थल एक्सेल शीट"
+        ),
+        TopicDocument(
+            id = 7,
+            topicId = "TOPIC_COMP_BASICS",
+            subjectId = "SUB_COMPUTER",
+            title = "कंप्यूटर फंडामेंटल्स एवं हार्डवेयर मास्टर गाइड",
+            fileName = "Computer_Basics_Master_Guide.pdf",
+            fileType = "PDF",
+            fileSize = "610 KB",
+            uploadDate = "2026-09-07",
+            description = "CPU, मेमोरी मात्रक (KB, MB, GB, TB), इनपुट/आउटपुट डिवाइसेस"
+        ),
+        TopicDocument(
+            id = 8,
+            topicId = "TOPIC_COMP_OFFICE",
+            subjectId = "SUB_COMPUTER",
+            title = "MS Excel व Word शॉर्टकट कुंजियां एवं फॉर्मूला सूची",
+            fileName = "MS_Excel_Shortcuts_Formulas.xlsx",
+            fileType = "EXCEL",
+            fileSize = "210 KB",
+            uploadDate = "2026-09-07",
+            description = "एक्सेल के 100 आवश्यक शॉर्टकट, सम, एवरेज, VLOOKUP फॉर्मूला तालिका"
+        ),
+        TopicDocument(
+            id = 9,
+            topicId = "TOPIC_REAS_ANALOGY",
+            subjectId = "SUB_REASONING",
+            title = "सादृश्यता एवं वर्गीकरण सुपर ट्रिक्स नोट्स",
+            fileName = "Reasoning_Analogy_Classification.pdf",
+            fileType = "PDF",
+            fileSize = "390 KB",
+            uploadDate = "2026-09-06",
+            description = "शब्द, संख्या एवं अक्षर सादृश्यता को 5 सेकंड में हल करने की विधि"
+        ),
+        TopicDocument(
+            id = 10,
+            topicId = "TOPIC_HINDI_VARN",
+            subjectId = "SUB_HINDI",
+            title = "सामान्य हिंदी वर्णमाला, संधि एवं समास चार्ट",
+            fileName = "Hindi_Varnmala_Sandhi_Samas.pdf",
+            fileType = "PDF",
+            fileSize = "520 KB",
+            uploadDate = "2026-09-05",
+            description = "स्वर, व्यंजन, उच्चारण स्थान एवं संधि विच्छेद के संपूर्ण नियम"
         )
     )
 }

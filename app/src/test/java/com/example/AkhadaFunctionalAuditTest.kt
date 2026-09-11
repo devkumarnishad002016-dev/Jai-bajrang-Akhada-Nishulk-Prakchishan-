@@ -195,7 +195,7 @@ class AkhadaFunctionalAuditTest {
         val studentA = StudentProfile(
             studentId = "JBA-2026-001",
             fullName = "Candidate A",
-            village = "मौरिकला",
+            village = "मौरीकला (गुफा)",
             overallScore = 92
         )
         val studentB = StudentProfile(

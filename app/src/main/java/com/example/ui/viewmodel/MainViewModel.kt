@@ -1,6 +1,8 @@
 package com.example.ui.viewmodel
 
 import android.app.Application
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.ai.AiCoachEngine
@@ -13,6 +15,8 @@ import com.example.data.recruitment.*
 import com.example.data.repository.AppRepository
 import com.example.util.AdminSecurityManager
 import com.example.util.RolePermissionManager
+import com.example.util.TopicFileUtils
+import java.io.File
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -236,6 +240,75 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
+     * Admin authority to reset or edit any Student's password.
+     * Allows custom new password or quick defaults (e.g. JBA@123456).
+     */
+    fun adminResetStudentPassword(studentId: String, newPassword: String): Result<Unit> {
+        if (!RolePermissionManager.canManageCredentials(_currentRole.value)) {
+            return Result.failure(SecurityException("केवल व्यवस्थापक (Admin) ही छात्रों का पासवर्ड बदल या रीसेट कर सकते हैं।"))
+        }
+        val trimmedPass = newPassword.trim()
+        if (trimmedPass.length < 6) {
+            return Result.failure(IllegalArgumentException("पासवर्ड कम से कम 6 अक्षरों का होना चाहिए।"))
+        }
+
+        val targetStudent = allStudents.value.find {
+            it.studentId.equals(studentId.trim(), ignoreCase = true) || it.id.toString() == studentId.trim()
+        } ?: return Result.failure(IllegalStateException("छात्र विवरण नहीं मिला (Student not found: $studentId)"))
+
+        val (newHash, newSalt) = com.example.util.StudentAuthManager.createPasswordCredentials(trimmedPass)
+        val updatedStudent = targetStudent.copy(
+            passwordHash = newHash,
+            passwordSalt = newSalt,
+            updatedAt = System.currentTimeMillis()
+        )
+
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            repository.updateStudent(updatedStudent)
+        }
+        return Result.success(Unit)
+    }
+
+    /**
+     * Admin authority to reset or edit any Coach / Trainer's password.
+     */
+    fun adminResetCoachPassword(coachId: String, newPassword: String): Result<Unit> {
+        if (!RolePermissionManager.canManageCredentials(_currentRole.value)) {
+            return Result.failure(SecurityException("केवल व्यवस्थापक (Admin) ही कोच का पासवर्ड बदल या रीसेट कर सकते हैं।"))
+        }
+        val trimmedPass = newPassword.trim()
+        if (trimmedPass.length < 6) {
+            return Result.failure(IllegalArgumentException("पासवर्ड कम से कम 6 अक्षरों का होना चाहिए।"))
+        }
+
+        val trimmedId = coachId.trim()
+        val trainer = allTrainers.value.find {
+            it.coachId.equals(trimmedId, ignoreCase = true) || it.id.toString() == trimmedId || it.name.equals(trimmedId, ignoreCase = true)
+        } ?: return Result.failure(IllegalStateException("कोच विवरण नहीं मिला (Coach not found: $coachId)"))
+
+        val (newHash, newSalt) = com.example.util.CoachAuthManager.createPasswordCredentials(trimmedPass)
+        val updatedTrainer = trainer.copy(
+            passwordHash = newHash,
+            passwordSalt = newSalt,
+            forcePasswordChange = false
+        )
+
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            repository.updateTrainer(updatedTrainer)
+            try {
+                repository.cloudAuthManager.updateCoachPasswordChangedInFirestore(trainer.coachId)
+            } catch (e: Exception) {
+                android.util.Log.e("MainViewModel", "Firestore update coach credentials error", e)
+            }
+        }
+
+        if (_activeCoach.value?.coachId.equals(trainer.coachId, ignoreCase = true)) {
+            _activeCoach.value = updatedTrainer
+        }
+        return Result.success(Unit)
+    }
+
+    /**
      * Initial one-time Admin PIN configuration.
      */
     fun setupInitialAdminPin(pin: String): Result<Unit> {
@@ -396,6 +469,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val allTopics: StateFlow<List<StudyTopic>> = repository.allTopics
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val allTopicDocuments: StateFlow<List<TopicDocument>> = repository.allTopicDocuments
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val allQuestions: StateFlow<List<Question>> = repository.allQuestions
@@ -844,6 +920,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 remarks = remarks
             )
             repository.markAttendance(record)
+        }
+    }
+
+    /**
+     * Deletes attendance record for a specific date if entered erroneously.
+     */
+    fun deleteAttendanceForDate(
+        studentId: String = _activeStudentId.value,
+        date: String
+    ) {
+        viewModelScope.launch {
+            repository.deleteAttendanceForDate(studentId, date)
         }
     }
 
@@ -1493,6 +1581,69 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (!RolePermissionManager.canManageStudyMaterials(_currentRole.value)) return
         viewModelScope.launch {
             repository.deleteTopic(topic)
+        }
+    }
+
+    fun addTopicDocument(doc: TopicDocument) {
+        if (!RolePermissionManager.canManageStudyMaterials(_currentRole.value)) return
+        viewModelScope.launch {
+            repository.insertTopicDocument(doc)
+        }
+    }
+
+    fun updateTopicDocument(doc: TopicDocument) {
+        if (!RolePermissionManager.canManageStudyMaterials(_currentRole.value)) return
+        viewModelScope.launch {
+            repository.updateTopicDocument(doc)
+        }
+    }
+
+    fun deleteTopicDocument(doc: TopicDocument, context: Context? = null) {
+        if (!RolePermissionManager.canManageStudyMaterials(_currentRole.value)) return
+        viewModelScope.launch {
+            if (context != null && doc.filePath.isNotBlank()) {
+                TopicFileUtils.deleteLocalFile(context, doc.filePath)
+            }
+            repository.deleteTopicDocument(doc)
+        }
+    }
+
+    fun uploadTopicFile(
+        context: Context,
+        uri: Uri,
+        topicId: String,
+        subjectId: String,
+        title: String,
+        description: String,
+        fileType: String,
+        onSuccess: () -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        if (!RolePermissionManager.canManageStudyMaterials(_currentRole.value)) {
+            onError("अनधिकृत: केवल अधिकृत एडमिन/प्रशिक्षक ही फ़ाइल अपलोड कर सकते हैं!")
+            return
+        }
+        viewModelScope.launch {
+            try {
+                val (filePath, sizeFormatted) = TopicFileUtils.savePickedUriToInternalStorage(context, uri)
+                val fileName = File(filePath).name
+                val doc = TopicDocument(
+                    topicId = topicId,
+                    subjectId = subjectId,
+                    title = title.ifBlank { fileName },
+                    fileName = fileName,
+                    fileType = fileType.uppercase(),
+                    filePath = filePath,
+                    fileSize = sizeFormatted,
+                    uploadDate = todayDateStr,
+                    description = description,
+                    isPublished = true
+                )
+                repository.insertTopicDocument(doc)
+                onSuccess()
+            } catch (e: Exception) {
+                onError(e.localizedMessage ?: "फ़ाइल अपलोड करने में त्रुटि")
+            }
         }
     }
 

@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.*
 import com.example.ui.components.MetricStatCard
 import com.example.ui.theme.*
+import com.example.util.TopicFileUtils
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -37,6 +38,7 @@ fun StudyScreen(
     allTopics: List<StudyTopic>,
     allQuestions: List<Question>,
     studentStudyAttempts: List<StudyAttempt>,
+    allTopicDocuments: List<TopicDocument> = emptyList(),
     selectedSubject: String,
     onSelectSubject: (String) -> Unit,
     onToggleChapter: (Chapter) -> Unit,
@@ -325,42 +327,98 @@ fun StudyScreen(
                                     val topicCorrect = topicAttempts.count { it.isCorrect }
                                     val topicAcc = if (topicAttempts.isNotEmpty()) ((topicCorrect * 100) / topicAttempts.size) else 0
 
+                                    val topicDocs = remember(allTopicDocuments, topic.topicId) {
+                                        allTopicDocuments.filter { it.topicId == topic.topicId }
+                                    }
+
                                     Surface(
                                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
                                         shape = RoundedCornerShape(10.dp),
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        Row(
+                                        Column(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .padding(10.dp),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
+                                            verticalArrangement = Arrangement.spacedBy(6.dp)
                                         ) {
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text(
-                                                    text = topic.topicName,
-                                                    style = MaterialTheme.typography.bodyMedium,
-                                                    fontWeight = FontWeight.SemiBold
-                                                )
-                                                Text(
-                                                    text = "${topicQuestions.size} प्रश्न • हल: ${topicAttempts.size} (सटीकता: $topicAcc%)",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        text = topic.topicName,
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        fontWeight = FontWeight.SemiBold
+                                                    )
+                                                    Text(
+                                                        text = "${topicQuestions.size} प्रश्न • हल: ${topicAttempts.size} (सटीकता: $topicAcc%)",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+
+                                                Button(
+                                                    onClick = {
+                                                        practiceSubject = subject
+                                                        practiceTopic = topic
+                                                    },
+                                                    colors = ButtonDefaults.buttonColors(containerColor = OliveTertiary),
+                                                    shape = RoundedCornerShape(6.dp),
+                                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                                                    modifier = Modifier.testTag("practice_topic_${topic.topicId}")
+                                                ) {
+                                                    Text("अभ्यास करें", style = MaterialTheme.typography.labelSmall)
+                                                }
                                             }
 
-                                            Button(
-                                                onClick = {
-                                                    practiceSubject = subject
-                                                    practiceTopic = topic
-                                                },
-                                                colors = ButtonDefaults.buttonColors(containerColor = OliveTertiary),
-                                                shape = RoundedCornerShape(6.dp),
-                                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
-                                                modifier = Modifier.testTag("practice_topic_${topic.topicId}")
-                                            ) {
-                                                Text("अभ्यास करें", style = MaterialTheme.typography.labelSmall)
+                                            // Topic-Wise PDF and Excel materials uploaded by Admin
+                                            if (topicDocs.isNotEmpty()) {
+                                                Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                                                Text(
+                                                    text = "📂 अध्ययन सामग्री (PDF व Excel शीट्स):",
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = NavySecondary
+                                                )
+                                                LazyRow(
+                                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                                    modifier = Modifier.fillMaxWidth()
+                                                ) {
+                                                    items(topicDocs) { doc ->
+                                                        val isPdf = doc.isPdf
+                                                        Surface(
+                                                            color = if (isPdf) StatusAbsent.copy(alpha = 0.12f) else Color(0xFF059669).copy(alpha = 0.12f),
+                                                            shape = RoundedCornerShape(8.dp),
+                                                            modifier = Modifier.clickable {
+                                                                TopicFileUtils.openDocument(context, doc)
+                                                            }
+                                                        ) {
+                                                            Row(
+                                                                verticalAlignment = Alignment.CenterVertically,
+                                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                                            ) {
+                                                                Text(if (isPdf) "📕" else "📗", fontSize = 12.sp)
+                                                                Spacer(modifier = Modifier.width(4.dp))
+                                                                Text(
+                                                                    text = doc.title,
+                                                                    fontSize = 11.sp,
+                                                                    fontWeight = FontWeight.Medium,
+                                                                    color = if (isPdf) StatusAbsent else Color(0xFF059669)
+                                                                )
+                                                                Spacer(modifier = Modifier.width(4.dp))
+                                                                Icon(
+                                                                    imageVector = Icons.Default.OpenInNew,
+                                                                    contentDescription = "Open",
+                                                                    modifier = Modifier.size(12.dp),
+                                                                    tint = if (isPdf) StatusAbsent else Color(0xFF059669)
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -372,7 +430,7 @@ fun StudyScreen(
             }
         } else {
             // --- TAB 1: CHAPTERS & SYLLABUS (EXISTING COMPATIBILITY) ---
-            val subjectsList = listOf("Mathematics", "Reasoning", "Hindi", "English", "GK / GS")
+            val subjectsList = listOf("Mathematics", "Reasoning", "Hindi", "English", "GK / GS", "Computer")
             val filteredChapters = allChapters.filter { chapter ->
                 val matchSubject = chapter.subjectName.equals(selectedSubject, ignoreCase = true)
                 val matchSearch = chapterSearchQuery.isBlank() ||
@@ -467,6 +525,7 @@ fun StudyScreen(
                                         "Hindi" -> "सामान्य हिंदी"
                                         "English" -> "General English"
                                         "GK / GS" -> "GK / GS व संविधान"
+                                        "Computer" -> "कंप्यूटर (Computer)"
                                         else -> subject
                                     },
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal

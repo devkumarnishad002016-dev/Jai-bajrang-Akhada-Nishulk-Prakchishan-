@@ -37,6 +37,35 @@ data class StudyTopic(
 )
 
 @Entity(
+    tableName = "topic_documents",
+    indices = [
+        Index(value = ["topicId"]),
+        Index(value = ["subjectId"]),
+        Index(value = ["fileType"])
+    ]
+)
+data class TopicDocument(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val topicId: String, // references StudyTopic.topicId e.g. "TOPIC_MATH_NUMSYS"
+    val subjectId: String = "", // references StudySubject.subjectId e.g. "SUB_MATH"
+    val title: String, // e.g. "संख्या पद्धति सूत्र एवं ट्रिक्स"
+    val fileName: String, // e.g. "Number_System_Formulas.pdf" or "Math_Questions.xlsx"
+    val fileType: String, // "PDF" or "EXCEL"
+    val filePath: String = "", // absolute path to file in internal storage or remote URL
+    val fileSize: String = "500 KB",
+    val uploadDate: String = "2026-09-11",
+    val description: String = "",
+    val downloadCount: Int = 0,
+    val isPublished: Boolean = true,
+    val timestamp: Long = System.currentTimeMillis()
+) {
+    val isPdf: Boolean get() = fileType.equals("PDF", ignoreCase = true)
+    val isExcel: Boolean get() = fileType.equals("EXCEL", ignoreCase = true) || fileType.equals("XLSX", ignoreCase = true) || fileType.equals("XLS", ignoreCase = true) || fileType.equals("CSV", ignoreCase = true)
+    val fileBadge: String get() = if (isPdf) "PDF दस्तावेज़" else if (isExcel) "Excel स्प्रेडशीट" else "दस्तावेज़"
+    val fileIcon: String get() = if (isPdf) "📕" else if (isExcel) "📗" else "📄"
+}
+
+@Entity(
     tableName = "chapters",
     indices = [
         Index(value = ["subjectName", "chapterNumber", "chapterName"]),

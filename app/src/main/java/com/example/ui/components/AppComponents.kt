@@ -101,7 +101,7 @@ fun AppTopHeader(
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = "मौरिकला गुफा",
+                        text = "मौरीकला (गुफा)",
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                         color = SaffronPrimary,
                         fontWeight = FontWeight.Medium,

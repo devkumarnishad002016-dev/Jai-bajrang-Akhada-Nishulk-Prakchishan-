@@ -154,7 +154,7 @@ object BackupRestoreManager {
                         fullName = obj.optString("fullName", "कैडेट"),
                         fatherName = obj.optString("fatherName", ""),
                         mobileNumber = obj.optString("mobileNumber", "9876543210"),
-                        village = obj.optString("village", "मौरिकला"),
+                        village = obj.optString("village", "मौरीकला (गुफा)"),
                         dob = obj.optString("dob", "2004-05-15"),
                         age = obj.optInt("age", 21),
                         gender = obj.optString("gender", "Male"),

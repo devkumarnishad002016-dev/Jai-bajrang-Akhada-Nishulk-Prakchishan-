@@ -51,6 +51,13 @@ class SyncEngineProductionTest {
         override fun getAttendanceForStudent(studentId: String): Flow<List<AttendanceRecord>> = flowOf(attendance.filter { it.studentId == studentId })
         override fun getTodayAttendance(studentId: String, date: String): Flow<AttendanceRecord?> = flowOf(attendance.find { it.studentId == studentId && it.date == date })
         override fun getAttendanceByDate(date: String): Flow<List<AttendanceRecord>> = flowOf(attendance.filter { it.date == date })
+        override suspend fun getAttendanceForStudentAndDateDirect(studentId: String, date: String): AttendanceRecord? =
+            attendance.find { it.studentId == studentId && it.date == date }
+        override suspend fun deleteAttendanceForDate(studentId: String, date: String): Int {
+            val before = attendance.size
+            attendance.removeAll { it.studentId == studentId && it.date == date }
+            return before - attendance.size
+        }
         override suspend fun insertAttendance(record: AttendanceRecord): Long {
             attendance.removeAll { it.studentId == record.studentId && it.date == record.date }
             attendance.add(record)

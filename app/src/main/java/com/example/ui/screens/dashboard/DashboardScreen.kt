@@ -141,7 +141,7 @@ fun DashboardScreen(
                                 color = Color.White
                             )
                             Text(
-                                text = "गाँव से सेना–पुलिस भर्ती अभियान • मौरिकला गुफा",
+                                text = "गाँव से सेना–पुलिस भर्ती अभियान • मौरीकला (गुफा)",
                                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                                 color = Color.White.copy(alpha = 0.85f)
                             )
@@ -1284,7 +1284,7 @@ fun DashboardScreen(
         item {
             Column {
                 Text(
-                    text = "🚩 जय बजरंग अखाड़ा अभियान (मौरीकला गुफा)",
+                    text = "🚩 जय बजरंग अखाड़ा अभियान (मौरीकला (गुफा))",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -1314,7 +1314,7 @@ fun DashboardScreen(
                     )
                     AkhadaInfoCard(
                         title = "प्रशिक्षण केंद्र",
-                        subtitle = "Maurikala Gufa",
+                        subtitle = "मौरीकला (गुफा)",
                         icon = Icons.Default.LocationOn,
                         color = OliveTertiary,
                         modifier = Modifier.weight(1f),

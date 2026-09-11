@@ -59,7 +59,7 @@ fun ParentProgressScreen(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "जय बजरंग अखाड़ा, मौरिकला गुफा • प्रगति रिपोर्ट",
+                            text = "जय बजरंग अखाड़ा, मौरीकला (गुफा) • प्रगति रिपोर्ट",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

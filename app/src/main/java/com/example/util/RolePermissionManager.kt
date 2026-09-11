@@ -59,6 +59,11 @@ object RolePermissionManager {
     fun canManageAdminSecurity(role: String?): Boolean = isAdmin(role)
 
     /**
+     * Authority to reset or edit passwords for students and coaches: Strictly Admin only.
+     */
+    fun canManageCredentials(role: String?): Boolean = isAdmin(role)
+
+    /**
      * Delete or remove other Trainer accounts: Strictly Admin only.
      */
     fun canDeleteTrainer(role: String?): Boolean = isAdmin(role)
@@ -94,9 +99,9 @@ object RolePermissionManager {
     fun canManageContentCms(role: String?): Boolean = isAdmin(role)
 
     /**
-     * Study Materials & Subject Management: Strictly Admin only.
+     * Study Materials & Subject Management: Admin & Academy Coaches.
      */
-    fun canManageStudyMaterials(role: String?): Boolean = isAdmin(role)
+    fun canManageStudyMaterials(role: String?): Boolean = isAdmin(role) || isTrainer(role)
 
     // ==========================================
     // Ground Operations: Allowed for Admin & Trainer

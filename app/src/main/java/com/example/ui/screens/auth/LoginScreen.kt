@@ -124,7 +124,7 @@ fun LoginScreen(
                     ) {
                         Image(
                             painter = painterResource(id = R.drawable.app_icon_emblem),
-                            contentDescription = "जय बजरंग अखाड़ा मौरीकला Emblem",
+                            contentDescription = "जय बजरंग अखाड़ा मौरीकला (गुफा) Emblem",
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
@@ -149,7 +149,7 @@ fun LoginScreen(
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
-                        text = "गाँव से सेना–पुलिस भर्ती अभियान • मौरिकला गुफा",
+                        text = "गाँव से सेना–पुलिस भर्ती अभियान • मौरीकला (गुफा)",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
@@ -1086,7 +1086,7 @@ fun StudentSelfRegistrationDialog(
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text("नया छात्र पंजीयन (निःशुल्क प्रवेश)", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    Text("जय बजरंग अखाड़ा, मौरीकला गुफा", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("जय बजरंग अखाड़ा, मौरीकला (गुफा)", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         },
@@ -1170,7 +1170,7 @@ fun StudentSelfRegistrationDialog(
                             value = village,
                             onValueChange = { village = it; validationError = null },
                             label = { Text("गाँव (Village) *") },
-                            placeholder = { Text("मौरिकला") },
+                            placeholder = { Text("मौरीकला (गुफा)") },
                             singleLine = true,
                             modifier = Modifier.weight(1f).testTag("reg_village_input")
                         )
@@ -1344,7 +1344,7 @@ fun StudentSelfRegistrationDialog(
                             studentId = nextId,
                             fullName = name.trim(),
                             fatherName = fatherName.trim().ifEmpty { "श्री रामकुमार" },
-                            village = village.trim().ifEmpty { "मौरिकला" },
+                            village = village.trim().ifEmpty { "मौरीकला (गुफा)" },
                             age = calculatedAge,
                             dob = dob.trim().ifEmpty { "2005-05-15" },
                             gender = gender.trim().ifEmpty { "Male" },

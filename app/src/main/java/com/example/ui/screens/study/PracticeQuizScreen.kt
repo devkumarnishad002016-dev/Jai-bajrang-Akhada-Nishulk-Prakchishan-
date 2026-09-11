@@ -42,12 +42,13 @@ data class PracticeQuizState(
     val selectedAnswers: Map<Int, String> = emptyMap(), // questionIndex -> "A", "B", "C", "D"
     val submittedQuestions: Set<Int> = emptySet(), // indices of questions where answer has been submitted
     val isFinished: Boolean = false,
-    val timeSpentSeconds: Int = 0
+    val timeSpentSeconds: Int = 0,
+    val isStudyMode: Boolean = false
 ) {
     val currentQuestion: Question? get() = questions.getOrNull(currentIndex)
     val totalQuestions: Int get() = questions.size
-    val currentAnswer: String? get() = selectedAnswers[currentIndex]
-    val isCurrentSubmitted: Boolean get() = submittedQuestions.contains(currentIndex)
+    val currentAnswer: String? get() = if (isStudyMode) currentQuestion?.correctLetter else selectedAnswers[currentIndex]
+    val isCurrentSubmitted: Boolean get() = isStudyMode || submittedQuestions.contains(currentIndex)
 
     val correctCount: Int get() = submittedQuestions.count { idx ->
         val q = questions.getOrNull(idx) ?: return@count false
@@ -138,6 +139,24 @@ fun PracticeQuizScreen(
                     }
                 },
                 actions = {
+                    // Study Mode Toggle
+                    Surface(
+                        color = if (quizState.isStudyMode) SaffronPrimary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .clickable {
+                                quizState = quizState.copy(isStudyMode = !quizState.isStudyMode)
+                            }
+                    ) {
+                        Text(
+                            text = if (quizState.isStudyMode) "📖 अध्ययन मोड" else "📝 टेस्ट मोड",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = if (quizState.isStudyMode) SaffronPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+                        )
+                    }
+
                     // Real-time live score counters
                     Row(
                         modifier = Modifier.padding(end = 12.dp),
@@ -311,6 +330,13 @@ fun PracticeQuizQuestionContent(
     val currentQ = state.currentQuestion ?: return
     val selectedOption = state.currentAnswer
     val isSubmitted = state.isCurrentSubmitted
+    val stripListState = androidx.compose.foundation.lazy.rememberLazyListState()
+
+    androidx.compose.runtime.LaunchedEffect(state.currentIndex) {
+        if (state.totalQuestions > 0) {
+            stripListState.animateScrollToItem(state.currentIndex.coerceAtLeast(0))
+        }
+    }
 
     LazyColumn(
         modifier = modifier
@@ -356,6 +382,7 @@ fun PracticeQuizQuestionContent(
         // 2. Question Number Strip Palette
         item {
             LazyRow(
+                state = stripListState,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 4.dp),

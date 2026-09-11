@@ -7,10 +7,10 @@ import java.security.SecureRandom
 
 object AdminSecurityManager {
 
-    // Official Admin Profile Details (देव कुमार निषाद - मौरिकला गुफा)
+    // Official Admin Profile Details (देव कुमार निषाद - मौरीकला (गुफा))
     const val ADMIN_NAME = "देव कुमार निषाद"
     const val ADMIN_ROLE = "संचालक एवं मुख्य व्यवस्थापक (Director & Head Admin)"
-    const val ADMIN_VILLAGE = "मौरीकला गुफा"
+    const val ADMIN_VILLAGE = "मौरीकला (गुफा)"
     const val ADMIN_DOB = "23/12/1998"
     const val ADMIN_MOBILE = "6264059722"
     const val ADMIN_UNIQUE_ID = "DEV98ADMIN"

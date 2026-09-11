@@ -13,15 +13,16 @@ class StudyMaterialSystemTest {
     fun testAllSyllabusChaptersCountAndCoverage() {
         val syllabusChapters = SyllabusStudyMaterialData.getAllSyllabusChapters()
 
-        // Verify total exact chapters count = 63
-        assertEquals("Syllabus must contain exact 63 chapters", 63, syllabusChapters.size)
+        // Verify total exact chapters count = 78 (with 15 English chapters added)
+        assertEquals("Syllabus must contain exact 78 chapters", 78, syllabusChapters.size)
 
-        // Verify all 5 subjects are present
+        // Verify all 6 subjects are present
         val subjects = syllabusChapters.map { it.subjectName }.distinct()
         assertTrue(subjects.contains("Mathematics"))
         assertTrue(subjects.contains("Reasoning"))
         assertTrue(subjects.contains("Hindi"))
         assertTrue(subjects.contains("GK / GS"))
+        assertTrue(subjects.contains("English"))
         assertTrue(subjects.contains("Computer"))
 
         // Verify mathematics count = 15
@@ -40,12 +41,16 @@ class StudyMaterialSystemTest {
         val gkCount = syllabusChapters.count { it.subjectName == "GK / GS" }
         assertEquals(16, gkCount)
 
+        // Verify English count = 15
+        val englishCount = syllabusChapters.count { it.subjectName == "English" }
+        assertEquals(15, englishCount)
+
         // Verify computer count = 5
         val computerCount = syllabusChapters.count { it.subjectName == "Computer" }
         assertEquals(5, computerCount)
 
-        // Total = 15 + 15 + 12 + 16 + 5 = 63
-        assertEquals(63, mathCount + reasoningCount + hindiCount + gkCount + computerCount)
+        // Total = 15 + 15 + 12 + 16 + 15 + 5 = 78
+        assertEquals(78, mathCount + reasoningCount + hindiCount + gkCount + englishCount + computerCount)
     }
 
     @Test

@@ -49,7 +49,7 @@ class FreshInstallFullLifecycleAndMultiDeviceTest {
             studentId = "JBA-DEV-001",
             fullName = "सुरेश कुमार",
             fatherName = "राम कुमार",
-            village = "मौरिकला",
+            village = "मौरीकला (गुफा)",
             mobileNumber = "9876543210",
             weightKg = 62.5,
             heightCm = 172.0,
@@ -162,7 +162,7 @@ class FreshInstallFullLifecycleAndMultiDeviceTest {
         val newStudent = StudentProfile(
             studentId = "JBA-2026-999",
             fullName = "विकास वर्मा",
-            village = "मौरिकला गुफा",
+            village = "मौरीकला (गुफा)",
             mobileNumber = "9123456780",
             gender = "Male",
             time1600m = "5:20",

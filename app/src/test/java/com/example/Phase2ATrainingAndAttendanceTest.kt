@@ -47,7 +47,7 @@ class Phase2ATrainingAndAttendanceTest {
             fullName = "देवकुमार निषाद",
             fatherName = "श्री रामकुमार",
             mobileNumber = "9876543210",
-            village = "मौरिकला",
+            village = "मौरीकला (गुफा)",
             dob = "2004-05-15",
             age = 21,
             gender = "Male",
@@ -197,5 +197,35 @@ class Phase2ATrainingAndAttendanceTest {
         assertEquals(2, presentCount)
         assertEquals(1, absentCount)
         assertEquals(1, leaveCount)
+    }
+
+    @Test
+    fun `test direct attendance lookup and deletion by date for student`() = runBlocking {
+        val studentId = "JBA-2026-001"
+        val date1 = "2026-09-01"
+        val date2 = "2026-09-02"
+
+        dao.insertAttendance(AttendanceRecord(studentId = studentId, date = date1, status = "Present", remarks = "समय पर उपस्थित"))
+        dao.insertAttendance(AttendanceRecord(studentId = studentId, date = date2, status = "Late", remarks = "5 मिनट लेट"))
+
+        val record1 = dao.getAttendanceForStudentAndDateDirect(studentId, date1)
+        assertNotNull(record1)
+        assertEquals("Present", record1?.status)
+        assertEquals("समय पर उपस्थित", record1?.remarks)
+
+        val record2 = dao.getAttendanceForStudentAndDateDirect(studentId, date2)
+        assertNotNull(record2)
+        assertEquals("Late", record2?.status)
+
+        // Delete record2
+        val deletedRows = dao.deleteAttendanceForDate(studentId, date2)
+        assertEquals(1, deletedRows)
+
+        val record2AfterDelete = dao.getAttendanceForStudentAndDateDirect(studentId, date2)
+        assertNull(record2AfterDelete)
+
+        // date1 is still intact
+        val record1StillThere = dao.getAttendanceForStudentAndDateDirect(studentId, date1)
+        assertNotNull(record1StillThere)
     }
 }

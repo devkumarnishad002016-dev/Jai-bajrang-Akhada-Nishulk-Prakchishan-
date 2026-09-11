@@ -1,5 +1,9 @@
 package com.example.ui.screens.admin
 
+import android.content.Context
+import android.net.Uri
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -24,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.*
 import com.example.ui.theme.*
+import com.example.util.TopicFileUtils
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -33,12 +38,21 @@ fun AdminQuestionBankScreen(
     allQuestions: List<Question>,
     allSubjects: List<StudySubject>,
     allTopics: List<StudyTopic>,
+    allTopicDocuments: List<TopicDocument> = emptyList(),
     onAddQuestion: (Question) -> Unit,
     onUpdateQuestion: (Question) -> Unit,
     onDeleteQuestion: (Question) -> Unit,
     onToggleActive: (Question) -> Unit,
     onAddSubject: (StudySubject) -> Unit,
+    onUpdateSubject: (StudySubject) -> Unit = {},
+    onDeleteSubject: (StudySubject) -> Unit = {},
     onAddTopic: (StudyTopic) -> Unit,
+    onUpdateTopic: (StudyTopic) -> Unit = {},
+    onDeleteTopic: (StudyTopic) -> Unit = {},
+    onAddTopicDocument: (TopicDocument) -> Unit = {},
+    onDeleteTopicDocument: (TopicDocument, Context) -> Unit = { _, _ -> },
+    onUploadTopicFile: (context: Context, uri: Uri, topicId: String, subjectId: String, title: String, description: String, fileType: String, onSuccess: () -> Unit, onError: (String) -> Unit) -> Unit = { _, _, _, _, _, _, _, _, _ -> },
+    onNavigateToTopicCms: (() -> Unit)? = null,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -326,8 +340,17 @@ fun AdminQuestionBankScreen(
         SubjectTopicManagementDialog(
             allSubjects = allSubjects,
             allTopics = allTopics,
+            allTopicDocuments = allTopicDocuments,
             onAddSubject = onAddSubject,
+            onUpdateSubject = onUpdateSubject,
+            onDeleteSubject = onDeleteSubject,
             onAddTopic = onAddTopic,
+            onUpdateTopic = onUpdateTopic,
+            onDeleteTopic = onDeleteTopic,
+            onAddTopicDocument = onAddTopicDocument,
+            onDeleteTopicDocument = onDeleteTopicDocument,
+            onUploadTopicFile = onUploadTopicFile,
+            onNavigateToTopicCms = onNavigateToTopicCms,
             onDismiss = { showSubjectTopicDialog = false }
         )
     }
@@ -800,30 +823,68 @@ fun QuestionFormDialog(
 fun SubjectTopicManagementDialog(
     allSubjects: List<StudySubject>,
     allTopics: List<StudyTopic>,
+    allTopicDocuments: List<TopicDocument> = emptyList(),
     onAddSubject: (StudySubject) -> Unit,
+    onUpdateSubject: (StudySubject) -> Unit = {},
+    onDeleteSubject: (StudySubject) -> Unit = {},
     onAddTopic: (StudyTopic) -> Unit,
+    onUpdateTopic: (StudyTopic) -> Unit = {},
+    onDeleteTopic: (StudyTopic) -> Unit = {},
+    onAddTopicDocument: (TopicDocument) -> Unit = {},
+    onDeleteTopicDocument: (TopicDocument, Context) -> Unit = { _, _ -> },
+    onUploadTopicFile: (context: Context, uri: Uri, topicId: String, subjectId: String, title: String, description: String, fileType: String, onSuccess: () -> Unit, onError: (String) -> Unit) -> Unit = { _, _, _, _, _, _, _, _, _ -> },
+    onNavigateToTopicCms: (() -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
-    var selectedTab by remember { mutableStateOf(0) }
+    val context = LocalContext.current
+    var selectedTab by remember { mutableStateOf(1) } // Default to Topics tab for convenience
     var newSubName by remember { mutableStateOf("") }
-    var newSubId by remember { mutableStateOf("") }
     var newSubIcon by remember { mutableStateOf("📚") }
 
     var newTopName by remember { mutableStateOf("") }
-    var newTopId by remember { mutableStateOf("") }
     var selectedSubForTopic by remember { mutableStateOf(allSubjects.firstOrNull()?.subjectId ?: "") }
+
+    // Dialog state for topic editing/deleting/files
+    var topicToEditInDialog by remember { mutableStateOf<StudyTopic?>(null) }
+    var topicToDeleteInDialog by remember { mutableStateOf<StudyTopic?>(null) }
+    var topicForFilesInDialog by remember { mutableStateOf<StudyTopic?>(null) }
+
+    // Subject editing state
+    var subjectToEditInDialog by remember { mutableStateOf<StudySubject?>(null) }
+    var subjectToDeleteInDialog by remember { mutableStateOf<StudySubject?>(null) }
+
+    val docsByTopic = remember(allTopicDocuments) {
+        allTopicDocuments.groupBy { it.topicId }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("विषय व टॉपिक प्रबंधन", fontWeight = FontWeight.Bold) },
+        title = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("विषय व टॉपिक प्रबंधन", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                if (onNavigateToTopicCms != null) {
+                    TextButton(onClick = {
+                        onDismiss()
+                        onNavigateToTopicCms()
+                    }) {
+                        Text("विस्तृत CMS ↗", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = SaffronPrimary)
+                    }
+                }
+            }
+        },
         text = {
-            Column(modifier = Modifier.fillMaxWidth().heightIn(max = 450.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(modifier = Modifier.fillMaxWidth().heightIn(max = 500.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 TabRow(selectedTabIndex = selectedTab) {
                     Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("विषय (${allSubjects.size})") })
                     Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("टॉपिक (${allTopics.size})") })
                 }
 
                 if (selectedTab == 0) {
+                    // Subjects List with Edit & Delete
                     LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         items(allSubjects) { sub ->
                             Card(
@@ -835,8 +896,18 @@ fun SubjectTopicManagementDialog(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text("${sub.icon} ${sub.name} (${sub.subjectId})", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodySmall)
-                                    Text(if (sub.isActive) "सक्रिय" else "निष्क्रिय", color = if (sub.isActive) StatusPresent else MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.labelSmall)
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text("${sub.icon} ${sub.name}", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodySmall)
+                                        Text("ID: ${sub.subjectId} | ${if (sub.isActive) "सक्रिय" else "निष्क्रिय"}", color = if (sub.isActive) StatusPresent else MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.labelSmall)
+                                    }
+                                    Row {
+                                        IconButton(onClick = { subjectToEditInDialog = sub }, modifier = Modifier.size(30.dp)) {
+                                            Icon(Icons.Default.Edit, contentDescription = "Edit Subject", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                                        }
+                                        IconButton(onClick = { subjectToDeleteInDialog = sub }, modifier = Modifier.size(30.dp)) {
+                                            Icon(Icons.Default.Delete, contentDescription = "Delete Subject", tint = StatusAbsent, modifier = Modifier.size(16.dp))
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -871,15 +942,74 @@ fun SubjectTopicManagementDialog(
                         }
                     }
                 } else {
+                    // Topics List with Edit, Delete & File Upload
                     LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         items(allTopics) { top ->
+                            val topicDocs = docsByTopic[top.topicId] ?: emptyList()
+                            val pdfCount = topicDocs.count { it.isPdf }
+                            val excelCount = topicDocs.count { it.isExcel }
+
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                             ) {
-                                Column(modifier = Modifier.padding(8.dp)) {
-                                    Text(top.topicName, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodySmall)
-                                    Text("विषय ID: ${top.subjectId} | टॉपिक ID: ${top.topicId}", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
+                                Column(modifier = Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(top.topicName, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodySmall)
+                                            Text("विषय ID: ${top.subjectId} • ${if (top.isActive) "सक्रिय" else "निष्क्रिय"}", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
+                                        }
+
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            // Edit Topic Button
+                                            IconButton(
+                                                onClick = { topicToEditInDialog = top },
+                                                modifier = Modifier.size(30.dp)
+                                            ) {
+                                                Icon(Icons.Default.Edit, contentDescription = "संपादित करें", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                                            }
+                                            // Delete Topic Button
+                                            IconButton(
+                                                onClick = { topicToDeleteInDialog = top },
+                                                modifier = Modifier.size(30.dp)
+                                            ) {
+                                                Icon(Icons.Default.Delete, contentDescription = "हटाएं", tint = StatusAbsent, modifier = Modifier.size(16.dp))
+                                            }
+                                        }
+                                    }
+
+                                    // Topic-Wise PDF & Excel upload row
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            if (pdfCount > 0) {
+                                                Surface(color = StatusAbsent.copy(alpha = 0.15f), shape = RoundedCornerShape(4.dp)) {
+                                                    Text("📕 $pdfCount PDF", fontSize = 10.sp, color = StatusAbsent, modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp))
+                                                }
+                                            }
+                                            if (excelCount > 0) {
+                                                Surface(color = Color(0xFF059669).copy(alpha = 0.15f), shape = RoundedCornerShape(4.dp)) {
+                                                    Text("📗 $excelCount Excel", fontSize = 10.sp, color = Color(0xFF059669), modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp))
+                                                }
+                                            }
+                                        }
+
+                                        TextButton(
+                                            onClick = { topicForFilesInDialog = top },
+                                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Icon(Icons.Default.AttachFile, contentDescription = null, modifier = Modifier.size(14.dp), tint = SaffronPrimary)
+                                            Spacer(modifier = Modifier.width(2.dp))
+                                            Text("PDF / Excel (${topicDocs.size})", fontSize = 11.sp, color = SaffronPrimary, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -887,6 +1017,17 @@ fun SubjectTopicManagementDialog(
 
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text("नया टॉपिक जोड़ें:", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelSmall)
+                        // Subject selector for new topic
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            items(allSubjects) { sub ->
+                                FilterChip(
+                                    selected = selectedSubForTopic == sub.subjectId,
+                                    onClick = { selectedSubForTopic = sub.subjectId },
+                                    label = { Text("${sub.icon} ${sub.name}", fontSize = 11.sp) }
+                                )
+                            }
+                        }
+
                         OutlinedTextField(value = newTopName, onValueChange = { newTopName = it }, label = { Text("टॉपिक नाम") }, modifier = Modifier.fillMaxWidth())
                         Button(
                             onClick = {
@@ -917,4 +1058,143 @@ fun SubjectTopicManagementDialog(
             Button(onClick = onDismiss) { Text("पूर्ण") }
         }
     )
+
+    // Edit Topic sub-dialog
+    topicToEditInDialog?.let { topic ->
+        TopicEditDialog(
+            title = "टॉपिक संपादित करें",
+            allSubjects = allSubjects,
+            initialTopic = topic,
+            defaultSubjectId = topic.subjectId,
+            onDismiss = { topicToEditInDialog = null },
+            onSave = { updated ->
+                onUpdateTopic(updated)
+                topicToEditInDialog = null
+                Toast.makeText(context, "टॉपिक अपडेट हुआ!", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+
+    // Delete Topic confirmation sub-dialog
+    topicToDeleteInDialog?.let { topic ->
+        AlertDialog(
+            onDismissRequest = { topicToDeleteInDialog = null },
+            title = { Text("टॉपिक हटाएं (Delete)?", fontWeight = FontWeight.Bold) },
+            text = { Text("क्या आप निश्चित रूप से '${topic.topicName}' को हटाना चाहते हैं?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeleteTopic(topic)
+                        topicToDeleteInDialog = null
+                        Toast.makeText(context, "टॉपिक हटाया गया!", Toast.LENGTH_SHORT).show()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = StatusAbsent)
+                ) {
+                    Text("हटाएं")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { topicToDeleteInDialog = null }) { Text("रद्द करें") }
+            }
+        )
+    }
+
+    // Topic Files Dialog
+    topicForFilesInDialog?.let { topic ->
+        val subject = allSubjects.firstOrNull { it.subjectId == topic.subjectId }
+        val topicDocs = docsByTopic[topic.topicId] ?: emptyList()
+        TopicFileManagerDialog(
+            topic = topic,
+            subject = subject,
+            documents = topicDocs,
+            onDismiss = { topicForFilesInDialog = null },
+            onUploadFromStorage = { uri, title, desc, fileType ->
+                onUploadTopicFile(context, uri, topic.topicId, topic.subjectId, title, desc, fileType, {
+                    Toast.makeText(context, "फ़ाइल अपलोड हुई!", Toast.LENGTH_SHORT).show()
+                }, { err ->
+                    Toast.makeText(context, err, Toast.LENGTH_LONG).show()
+                })
+            },
+            onAddSampleDoc = { doc ->
+                onAddTopicDocument(doc)
+            },
+            onDeleteDocument = { doc ->
+                onDeleteTopicDocument(doc, context)
+            },
+            onOpenDocument = { doc ->
+                TopicFileUtils.openDocument(context, doc)
+            },
+            onShareDocument = { doc ->
+                TopicFileUtils.shareDocument(context, doc)
+            },
+            onPreviewSpreadsheet = { doc ->
+                // Handled via openDocument or external
+                TopicFileUtils.openDocument(context, doc)
+            }
+        )
+    }
+
+    // Subject Delete confirmation sub-dialog
+    subjectToDeleteInDialog?.let { sub ->
+        AlertDialog(
+            onDismissRequest = { subjectToDeleteInDialog = null },
+            title = { Text("विषय हटाएं (Delete Subject)?", fontWeight = FontWeight.Bold) },
+            text = { Text("क्या आप '${sub.name}' विषय को हटाना चाहते हैं?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeleteSubject(sub)
+                        subjectToDeleteInDialog = null
+                        Toast.makeText(context, "विषय हटाया गया!", Toast.LENGTH_SHORT).show()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = StatusAbsent)
+                ) {
+                    Text("हटाएं")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { subjectToDeleteInDialog = null }) { Text("रद्द करें") }
+            }
+        )
+    }
+
+    // Subject Edit sub-dialog
+    subjectToEditInDialog?.let { sub ->
+        var editSubName by remember { mutableStateOf(sub.name) }
+        var editSubIcon by remember { mutableStateOf(sub.icon) }
+        var editIsActive by remember { mutableStateOf(sub.isActive) }
+
+        AlertDialog(
+            onDismissRequest = { subjectToEditInDialog = null },
+            title = { Text("विषय संपादित करें", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = editSubName, onValueChange = { editSubName = it }, label = { Text("विषय नाम") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = editSubIcon, onValueChange = { editSubIcon = it }, label = { Text("इमोजी") }, modifier = Modifier.fillMaxWidth())
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(if (editIsActive) "सक्रिय" else "निष्क्रिय")
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Switch(checked = editIsActive, onCheckedChange = { editIsActive = it })
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (editSubName.isNotBlank()) {
+                            onUpdateSubject(sub.copy(name = editSubName.trim(), icon = editSubIcon.ifBlank { "📚" }, isActive = editIsActive))
+                            subjectToEditInDialog = null
+                            Toast.makeText(context, "विषय अपडेट हुआ!", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = SaffronPrimary)
+                ) {
+                    Text("सहेजें")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { subjectToEditInDialog = null }) { Text("रद्द करें") }
+            }
+        )
+    }
 }

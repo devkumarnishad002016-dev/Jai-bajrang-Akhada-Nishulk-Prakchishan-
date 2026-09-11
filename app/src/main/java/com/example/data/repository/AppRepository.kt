@@ -45,12 +45,19 @@ class AppRepository(
     val latestWorkoutPlan: Flow<DailyWorkoutPlan?> = dao.getLatestWorkoutPlan()
     val allTrainingRecords: Flow<List<TrainingRecord>> = dao.getAllTrainingRecords()
     val allWorkouts: Flow<List<WorkoutRecord>> = dao.getAllWorkouts()
+    val allTopicDocuments: Flow<List<TopicDocument>> = dao.getAllTopicDocuments()
 
     fun getTopicsForSubject(subjectId: String): Flow<List<StudyTopic>> =
         dao.getTopicsForSubject(subjectId)
 
     fun getActiveTopicsForSubject(subjectId: String): Flow<List<StudyTopic>> =
         dao.getActiveTopicsForSubject(subjectId)
+
+    fun getDocumentsForTopic(topicId: String): Flow<List<TopicDocument>> =
+        dao.getDocumentsForTopic(topicId)
+
+    fun getDocumentsForSubject(subjectId: String): Flow<List<TopicDocument>> =
+        dao.getDocumentsForSubject(subjectId)
 
     fun getQuestionsBySubjectId(subjectId: String): Flow<List<Question>> =
         dao.getQuestionsBySubjectId(subjectId)
@@ -74,6 +81,11 @@ class AppRepository(
     suspend fun insertTopic(topic: StudyTopic) = dao.insertTopic(topic)
     suspend fun updateTopic(topic: StudyTopic) = dao.updateTopic(topic)
     suspend fun deleteTopic(topic: StudyTopic) = dao.deleteTopic(topic)
+
+    suspend fun insertTopicDocument(doc: TopicDocument) = dao.insertTopicDocument(doc)
+    suspend fun updateTopicDocument(doc: TopicDocument) = dao.updateTopicDocument(doc)
+    suspend fun deleteTopicDocument(doc: TopicDocument) = dao.deleteTopicDocument(doc)
+    suspend fun deleteTopicDocumentById(id: Long) = dao.deleteTopicDocumentById(id)
 
     suspend fun addQuestion(question: Question) = dao.insertQuestion(question)
     suspend fun updateQuestion(question: Question) = dao.updateQuestion(question)
@@ -150,8 +162,33 @@ class AppRepository(
         )
     }
 
-    suspend fun markAttendance(record: AttendanceRecord) = dao.insertAttendance(record)
-    suspend fun markBatchAttendance(records: List<AttendanceRecord>) = dao.insertAttendanceList(records)
+    suspend fun markAttendance(record: AttendanceRecord): Long {
+        val existing = dao.getAttendanceForStudentAndDateDirect(record.studentId, record.date)
+        val recordToSave = if (existing != null && record.id == 0L) {
+            record.copy(id = existing.id)
+        } else {
+            record
+        }
+        return dao.insertAttendance(recordToSave)
+    }
+
+    suspend fun markBatchAttendance(records: List<AttendanceRecord>) {
+        val recordsToSave = records.map { record ->
+            val existing = dao.getAttendanceForStudentAndDateDirect(record.studentId, record.date)
+            if (existing != null && record.id == 0L) {
+                record.copy(id = existing.id)
+            } else {
+                record
+            }
+        }
+        dao.insertAttendanceList(recordsToSave)
+    }
+
+    suspend fun getAttendanceForStudentAndDateDirect(studentId: String, date: String): AttendanceRecord? =
+        dao.getAttendanceForStudentAndDateDirect(studentId, date)
+
+    suspend fun deleteAttendanceForDate(studentId: String, date: String): Int =
+        dao.deleteAttendanceForDate(studentId, date)
 
     suspend fun recordWorkout(record: WorkoutRecord) = dao.insertWorkoutRecord(record)
     suspend fun recordTraining(record: TrainingRecord) = dao.insertTrainingRecord(record)
@@ -325,6 +362,8 @@ class AppRepository(
     suspend fun uploadNotificationToCloud(notification: AppNotification) = cloudSyncManager.uploadNotificationToCloud(notification)
     suspend fun deleteNotificationFromCloud(notifId: String) = cloudSyncManager.deleteNotificationFromCloud(notifId)
 
+    suspend fun getStudentDirect(studentId: String): StudentProfile? = dao.getStudentDirect(studentId)
+
     suspend fun ensureDataSeeded() {
         seedInitialCoachesIfMissing()
         val existingStudents = dao.getAllStudentsDirect()
@@ -342,14 +381,44 @@ class AppRepository(
                 }
             }
 
+            // Always ensure all study subjects (including English) are up to date
+            dao.insertSubjects(com.example.data.db.SyllabusStudyMaterialData.getSyllabusSubjects())
+
             val existingChapters = dao.getAllChaptersDirect()
-            if (existingChapters.isEmpty() || existingChapters.size < 63) {
+            if (existingChapters.isEmpty() || existingChapters.size < 78) {
                 dao.insertChapters(com.example.data.db.SyllabusStudyMaterialData.getAllSyllabusChapters())
-                dao.insertSubjects(com.example.data.db.SyllabusStudyMaterialData.getSyllabusSubjects())
             }
+
+            // Ensure topics (including detailed subtopics like prime/composite, English, and newly added question bank topics) are seeded
+            val existingTopics = dao.getAllTopicsDirect()
+            val sampleTopics = DemoDataGenerator.getSampleStudyTopics()
+            val existingTopicIds = existingTopics.map { it.topicId }.toSet()
+            val missingTopics = sampleTopics.filter { it.topicId !in existingTopicIds }
+            if (missingTopics.isNotEmpty()) {
+                dao.insertTopics(missingTopics)
+            }
+
+            val existingQuestions = dao.getAllQuestionsDirect()
+            val sampleQuestions = DemoDataGenerator.getSampleQuestions()
+            val existingQuestionIds = existingQuestions.map { it.questionId }.toSet()
+            val missingQuestions = sampleQuestions.filter { it.questionId !in existingQuestionIds }
+            if (missingQuestions.isNotEmpty()) {
+                dao.insertQuestions(missingQuestions)
+            }
+
             val existingNotifs = dao.getAllNotificationsDirect()
             if (existingNotifs.isEmpty()) {
                 dao.insertNotifications(DemoDataGenerator.getSampleNotifications())
+            }
+
+            val existingAttendance = dao.getAllAttendanceDirect()
+            if (existingAttendance.isEmpty()) {
+                dao.insertAttendanceList(DemoDataGenerator.getSampleAttendance())
+            }
+
+            val existingDocs = dao.getAllTopicDocumentsDirect()
+            if (existingDocs.isEmpty()) {
+                dao.insertTopicDocuments(DemoDataGenerator.getSampleTopicDocuments())
             }
         }
     }

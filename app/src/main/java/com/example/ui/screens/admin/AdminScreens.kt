@@ -95,7 +95,10 @@ fun AdminDashboardScreen(
     cloudSyncStatus: com.example.data.cloud.CloudSyncStatus = com.example.data.cloud.CloudSyncStatus.Idle,
     onTriggerSync: () -> Unit = {},
     onAssignTrainer: (studentId: String, trainerId: String, trainerName: String, batchName: String) -> Unit = { _, _, _, _ -> },
-    onRecordGroundTest: (studentId: String, time1600m: String, pushups: Int, situps: Int, pullups: Int, longJumpFeet: Double, highJumpFeet: Double, shotPutMeters: Double, coachNotes: String) -> Unit = { _, _, _, _, _, _, _, _, _ -> }
+    onRecordGroundTest: (studentId: String, time1600m: String, pushups: Int, situps: Int, pullups: Int, longJumpFeet: Double, highJumpFeet: Double, shotPutMeters: Double, coachNotes: String) -> Unit = { _, _, _, _, _, _, _, _, _ -> },
+    allTrainers: List<Trainer> = emptyList(),
+    onResetStudentPassword: (studentId: String, newPassword: String) -> Result<Unit> = { _, _ -> Result.success(Unit) },
+    onResetCoachPassword: (coachId: String, newPassword: String) -> Result<Unit> = { _, _ -> Result.success(Unit) }
 ) {
     val isAdmin = RolePermissionManager.isAdmin(currentRole)
     val isTrainer = RolePermissionManager.isTrainer(currentRole)
@@ -106,6 +109,10 @@ fun AdminDashboardScreen(
     var selectedStudentForDetails by remember { mutableStateOf<StudentProfile?>(null) }
     var studentForTrainerAssignment by remember { mutableStateOf<StudentProfile?>(null) }
     var studentForGroundTestRecord by remember { mutableStateOf<StudentProfile?>(null) }
+    var studentForPasswordReset by remember { mutableStateOf<StudentProfile?>(null) }
+    var coachForPasswordReset by remember { mutableStateOf<Trainer?>(null) }
+    var showPasswordManagementDialog by remember { mutableStateOf(false) }
+    var passwordActionFeedback by remember { mutableStateOf<String?>(null) }
 
     // Search and Filter State for Cadets
     var searchQuery by remember { mutableStateOf("") }
@@ -299,7 +306,7 @@ fun AdminDashboardScreen(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = if (isAdmin) "जय बजरंग अखाड़ा, मौरिकला गुफा" else "जय बजरंग अखाड़ा — ग्राउंड प्रशिक्षण, उपस्थिति व आवंटन",
+                                    text = if (isAdmin) "जय बजरंग अखाड़ा, मौरीकला (गुफा)" else "जय बजरंग अखाड़ा — ग्राउंड प्रशिक्षण, उपस्थिति व आवंटन",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -768,6 +775,14 @@ fun AdminDashboardScreen(
                             color = SaffronDark,
                             onClick = { onNavigate("admin_question_bank") }
                         )
+
+                        AdminActionRow(
+                            title = "📂 टॉपिक-वार PDF व Excel अपलोड CMS (Topic Files CMS)",
+                            subtitle = "टॉपिक जोड़ें/हटाएं/संपादित करें एवं टॉपिक-वार PDF, Excel व शीट्स अपलोड करें",
+                            icon = Icons.Default.FolderSpecial,
+                            color = Color(0xFF059669),
+                            onClick = { onNavigate("admin_topic_management") }
+                        )
                     }
 
                     AdminActionRow(
@@ -994,6 +1009,22 @@ fun AdminDashboardScreen(
                             }
 
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                if (isAdmin) {
+                                    OutlinedButton(
+                                        onClick = { studentForPasswordReset = student },
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                        shape = RoundedCornerShape(6.dp),
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFDC2626)),
+                                        modifier = Modifier
+                                            .height(28.dp)
+                                            .testTag("admin_reset_pass_btn_${student.studentId}")
+                                    ) {
+                                        Icon(Icons.Default.LockReset, contentDescription = null, modifier = Modifier.size(12.dp))
+                                        Spacer(modifier = Modifier.width(3.dp))
+                                        Text("पासवर्ड", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp))
+                                    }
+                                }
+
                                 OutlinedButton(
                                     onClick = { studentForTrainerAssignment = student },
                                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
@@ -1306,6 +1337,14 @@ fun AdminDashboardScreen(
                         )
 
                         AdminActionRow(
+                            title = "📂 टॉपिक-वार PDF व Excel अपलोड CMS (Topic Files CMS)",
+                            subtitle = "टॉपिक जोड़ें/हटाएं/संपादित करें एवं टॉपिक-वार PDF, Excel व शीट्स अपलोड करें",
+                            icon = Icons.Default.FolderSpecial,
+                            color = Color(0xFF059669),
+                            onClick = { onNavigate("admin_topic_management") }
+                        )
+
+                        AdminActionRow(
                             title = "📖 अध्याय-वार स्टडी मटेरियल व नोट्स (Study Material CMS)",
                             subtitle = "63 सिलेबस चैप्टर्स, PDF नोट्स, यूट्यूब लेक्चर्स, पब्लिश/अनपब्लिश व क्रम प्रबंधन",
                             icon = Icons.Default.MenuBook,
@@ -1343,6 +1382,14 @@ fun AdminDashboardScreen(
                             icon = Icons.Default.Security,
                             color = Color(0xFF00695C),
                             onClick = { onNavigate("admin_security") }
+                        )
+
+                        AdminActionRow(
+                            title = "🔐 छात्र व कोच पासवर्ड प्राधिकरण (Password Control Authority)",
+                            subtitle = "किसी भी छात्र या कोच का भूला हुआ पासवर्ड बदलें, नया पासवर्ड बनाएं या डिफ़ॉल्ट रीसेट करें",
+                            icon = Icons.Default.LockReset,
+                            color = Color(0xFFDC2626),
+                            onClick = { showPasswordManagementDialog = true }
                         )
 
                         AdminActionRow(
@@ -1531,6 +1578,53 @@ fun AdminDashboardScreen(
                                 Text(text = "जन्म तिथि: ${s.dob} • आयु: $studentAge वर्ष • लिंग: ${s.gender}", style = MaterialTheme.typography.bodySmall)
                                 Text(text = "शिक्षा: ${s.education} • लक्ष्य: ${s.recruitmentGoal}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = SaffronPrimary)
                                 Text(text = "नामांकन दिनांक: ${s.joinDate}", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    }
+
+                    // Password & Credentials Control Card
+                    if (isAdmin) {
+                        item {
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF2F2)),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(Icons.Default.VpnKey, contentDescription = null, tint = Color(0xFFDC2626), modifier = Modifier.size(16.dp))
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text("लॉगिन पासवर्ड प्रबंधन", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall, color = Color(0xFF991B1B))
+                                            }
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text(
+                                                text = if (s.passwordHash.isNotBlank()) "कस्टम पासवर्ड सुरक्षित रूप से सक्रिय है" else "डिफ़ॉल्ट पासवर्ड (JBA@123456 / अंतिम 6 अंक)",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+
+                                        Button(
+                                            onClick = {
+                                                studentForPasswordReset = s
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626)),
+                                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                            shape = RoundedCornerShape(8.dp),
+                                            modifier = Modifier.testTag("btn_detail_reset_password_${s.studentId}")
+                                        ) {
+                                            Icon(Icons.Default.LockReset, contentDescription = null, modifier = Modifier.size(14.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("पासवर्ड बदलें", style = MaterialTheme.typography.labelSmall)
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -1859,7 +1953,7 @@ fun AdminDashboardScreen(
 
         var name by remember { mutableStateOf("") }
         var fatherName by remember { mutableStateOf("") }
-        var village by remember { mutableStateOf("मौरिकला") }
+        var village by remember { mutableStateOf("मौरीकला (गुफा)") }
         var dob by remember { mutableStateOf("2005-05-15") }
         var mobile by remember { mutableStateOf("") }
         var gender by remember { mutableStateOf("Male") }
@@ -2040,7 +2134,7 @@ fun AdminDashboardScreen(
                                 studentId = nextId,
                                 fullName = name.trim(),
                                 fatherName = fatherName.trim().ifEmpty { "श्री रामकुमार" },
-                                village = village.trim().ifEmpty { "मौरिकला" },
+                                village = village.trim().ifEmpty { "मौरीकला (गुफा)" },
                                 age = calculatedAge,
                                 dob = dob.trim().ifEmpty { "2005-05-15" },
                                 gender = gender.trim().ifEmpty { "Male" },
@@ -2083,6 +2177,690 @@ fun AdminDashboardScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showAddStudentDialog = false }) { Text("रद्द करें") }
+            }
+        )
+    }
+
+    // ==========================================
+    // DIALOG 1: STUDENT PASSWORD RESET & EDIT (ADMIN AUTHORITY)
+    // ==========================================
+    studentForPasswordReset?.let { student ->
+        var newPass by remember { mutableStateOf("") }
+        var confirmPass by remember { mutableStateOf("") }
+        var isPasswordVisible by remember { mutableStateOf(false) }
+        var resetError by remember { mutableStateOf<String?>(null) }
+        val cleanMobile = remember(student.mobileNumber) { student.mobileNumber.filter { it.isDigit() } }
+        val last6Mobile = remember(cleanMobile) { if (cleanMobile.length >= 6) cleanMobile.takeLast(6) else "123456" }
+
+        AlertDialog(
+            onDismissRequest = { studentForPasswordReset = null },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.LockReset,
+                    contentDescription = null,
+                    tint = Color(0xFFDC2626),
+                    modifier = Modifier.size(32.dp)
+                )
+            },
+            title = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "छात्र पासवर्ड रीसेट व संपादन",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "प्रशासक विशेषाधिकार (Admin Authority)",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Student Info Card
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = student.fullName,
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Surface(
+                                    color = SaffronContainer,
+                                    shape = RoundedCornerShape(6.dp)
+                                ) {
+                                    Text(
+                                        text = student.studentId,
+                                        fontWeight = FontWeight.Bold,
+                                        color = OnSaffronContainer,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "मोबाइल: ${student.mobileNumber} • गाँव: ${student.village}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    if (resetError != null) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.errorContainer,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = resetError ?: "",
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(8.dp)
+                            )
+                        }
+                    }
+
+                    // Quick Presets
+                    Text(
+                        text = "⚡ त्वरित डिफ़ॉल्ट चुनें (Quick Presets):",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        SuggestionChip(
+                            onClick = {
+                                newPass = "JBA@123456"
+                                confirmPass = "JBA@123456"
+                                resetError = null
+                            },
+                            label = { Text("JBA@123456", style = MaterialTheme.typography.labelSmall) },
+                            modifier = Modifier.weight(1f)
+                        )
+                        SuggestionChip(
+                            onClick = {
+                                newPass = last6Mobile
+                                confirmPass = last6Mobile
+                                resetError = null
+                            },
+                            label = { Text("अंतिम 6 अंक ($last6Mobile)", style = MaterialTheme.typography.labelSmall) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    // New Password Field
+                    OutlinedTextField(
+                        value = newPass,
+                        onValueChange = {
+                            newPass = it
+                            resetError = null
+                        },
+                        label = { Text("नया पासवर्ड (New Password)") },
+                        singleLine = true,
+                        visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                                Icon(
+                                    imageVector = if (isPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = "Toggle Visibility"
+                                )
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("input_admin_new_student_password")
+                    )
+
+                    // Confirm Password Field
+                    OutlinedTextField(
+                        value = confirmPass,
+                        onValueChange = {
+                            confirmPass = it
+                            resetError = null
+                        },
+                        label = { Text("पासवर्ड पुष्टि करें (Confirm Password)") },
+                        singleLine = true,
+                        visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("input_admin_confirm_student_password")
+                    )
+
+                    Text(
+                        text = "💡 नोट: नया पासवर्ड तुरंत प्रभाव से सक्रिय हो जाएगा। छात्र इस नए पासवर्ड से सीधे लॉगिन कर सकेंगे।",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val trimmed = newPass.trim()
+                        if (trimmed.isEmpty()) {
+                            resetError = "कृपया नया पासवर्ड दर्ज करें या त्वरित बटन चुनें।"
+                        } else if (trimmed.length < 6) {
+                            resetError = "पासवर्ड कम से कम 6 अक्षरों का होना चाहिए।"
+                        } else if (trimmed != confirmPass.trim()) {
+                            resetError = "पासवर्ड और पुष्टि पासवर्ड मेल नहीं खाते।"
+                        } else {
+                            val result = onResetStudentPassword(student.studentId, trimmed)
+                            if (result.isSuccess) {
+                                val successMsg = "छात्र ${student.fullName} (${student.studentId}) का नया पासवर्ड सफलतापूर्वक सेट हो गया: $trimmed"
+                                passwordActionFeedback = successMsg
+                                android.widget.Toast.makeText(context, successMsg, android.widget.Toast.LENGTH_LONG).show()
+                                studentForPasswordReset = null
+                            } else {
+                                resetError = result.exceptionOrNull()?.message ?: "पासवर्ड अपडेट करने में त्रुटि हुई।"
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626)),
+                    modifier = Modifier.testTag("btn_confirm_student_password_reset")
+                ) {
+                    Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("पासवर्ड सहेजें (Save)")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { studentForPasswordReset = null }) {
+                    Text("रद्द करें")
+                }
+            }
+        )
+    }
+
+    // ==========================================
+    // DIALOG 2: COACH / TRAINER PASSWORD RESET & EDIT (ADMIN AUTHORITY)
+    // ==========================================
+    coachForPasswordReset?.let { coach ->
+        var newPass by remember { mutableStateOf("") }
+        var confirmPass by remember { mutableStateOf("") }
+        var isPasswordVisible by remember { mutableStateOf(false) }
+        var resetError by remember { mutableStateOf<String?>(null) }
+
+        AlertDialog(
+            onDismissRequest = { coachForPasswordReset = null },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Sports,
+                    contentDescription = null,
+                    tint = SaffronPrimary,
+                    modifier = Modifier.size(32.dp)
+                )
+            },
+            title = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "कोच पासवर्ड रीसेट व संपादन",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "प्रशासक विशेषाधिकार (Admin Authority)",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Coach Info Card
+                    Surface(
+                        color = SaffronContainer.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = coach.name,
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Surface(
+                                    color = SaffronPrimary,
+                                    shape = RoundedCornerShape(6.dp)
+                                ) {
+                                    Text(
+                                        text = coach.coachId.ifEmpty { "COACH" },
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "उपलब्धि / बैकग्राउंड: ${coach.achievement.ifEmpty { coach.serviceBackground.ifEmpty { "प्रशिक्षक" } }}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    if (resetError != null) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.errorContainer,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = resetError ?: "",
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(8.dp)
+                            )
+                        }
+                    }
+
+                    // Quick Presets
+                    Text(
+                        text = "⚡ त्वरित डिफ़ॉल्ट चुनें (Quick Presets):",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        SuggestionChip(
+                            onClick = {
+                                newPass = "Coach@123456"
+                                confirmPass = "Coach@123456"
+                                resetError = null
+                            },
+                            label = { Text("Coach@123456", style = MaterialTheme.typography.labelSmall) },
+                            modifier = Modifier.weight(1f)
+                        )
+                        SuggestionChip(
+                            onClick = {
+                                newPass = "JBA@Coach2026"
+                                confirmPass = "JBA@Coach2026"
+                                resetError = null
+                            },
+                            label = { Text("JBA@Coach2026", style = MaterialTheme.typography.labelSmall) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    // New Password Field
+                    OutlinedTextField(
+                        value = newPass,
+                        onValueChange = {
+                            newPass = it
+                            resetError = null
+                        },
+                        label = { Text("नया कोच पासवर्ड (New Password)") },
+                        singleLine = true,
+                        visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                                Icon(
+                                    imageVector = if (isPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = "Toggle Visibility"
+                                )
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("input_admin_new_coach_password")
+                    )
+
+                    // Confirm Password Field
+                    OutlinedTextField(
+                        value = confirmPass,
+                        onValueChange = {
+                            confirmPass = it
+                            resetError = null
+                        },
+                        label = { Text("पासवर्ड पुष्टि करें (Confirm Password)") },
+                        singleLine = true,
+                        visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("input_admin_confirm_coach_password")
+                    )
+
+                    Text(
+                        text = "💡 कोच अपने Coach ID (उदा. ${coach.coachId}) और इस नए पासवर्ड से ट्रेनर डैशबोर्ड में लॉगिन कर सकेंगे।",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val trimmed = newPass.trim()
+                        if (trimmed.isEmpty()) {
+                            resetError = "कृपया नया पासवर्ड दर्ज करें या त्वरित बटन चुनें।"
+                        } else if (trimmed.length < 6) {
+                            resetError = "पासवर्ड कम से कम 6 अक्षरों का होना चाहिए।"
+                        } else if (trimmed != confirmPass.trim()) {
+                            resetError = "पासवर्ड और पुष्टि पासवर्ड मेल नहीं खाते।"
+                        } else {
+                            val coachIdToUpdate = coach.coachId.ifEmpty { coach.id.toString() }
+                            val result = onResetCoachPassword(coachIdToUpdate, trimmed)
+                            if (result.isSuccess) {
+                                val successMsg = "कोच ${coach.name} (${coachIdToUpdate}) का नया पासवर्ड सफलतापूर्वक सेट हो गया: $trimmed"
+                                passwordActionFeedback = successMsg
+                                android.widget.Toast.makeText(context, successMsg, android.widget.Toast.LENGTH_LONG).show()
+                                coachForPasswordReset = null
+                            } else {
+                                resetError = result.exceptionOrNull()?.message ?: "पासवर्ड अपडेट करने में त्रुटि हुई।"
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = SaffronPrimary),
+                    modifier = Modifier.testTag("btn_confirm_coach_password_reset")
+                ) {
+                    Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("पासवर्ड सहेजें (Save)")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { coachForPasswordReset = null }) {
+                    Text("रद्द करें")
+                }
+            }
+        )
+    }
+
+    // ==========================================
+    // DIALOG 3: CENTRAL PASSWORD CONTROL AUTHORITY HUB
+    // ==========================================
+    if (showPasswordManagementDialog) {
+        var authHubTab by remember { mutableStateOf(0) } // 0: Students, 1: Coaches
+        var authSearchQuery by remember { mutableStateOf("") }
+
+        val activeCoachesList = remember(allTrainers) {
+            if (allTrainers.isNotEmpty()) allTrainers else com.example.util.CoachAuthManager.getInitialCoachesList()
+        }
+
+        val filteredStudentList = remember(allStudents, authSearchQuery) {
+            if (authSearchQuery.isBlank()) {
+                allStudents
+            } else {
+                allStudents.filter {
+                    it.fullName.contains(authSearchQuery, ignoreCase = true) ||
+                            it.studentId.contains(authSearchQuery, ignoreCase = true) ||
+                            it.mobileNumber.contains(authSearchQuery) ||
+                            it.village.contains(authSearchQuery, ignoreCase = true)
+                }
+            }
+        }
+
+        val filteredCoachesList = remember(activeCoachesList, authSearchQuery) {
+            if (authSearchQuery.isBlank()) {
+                activeCoachesList
+            } else {
+                activeCoachesList.filter {
+                    it.name.contains(authSearchQuery, ignoreCase = true) ||
+                            it.coachId.contains(authSearchQuery, ignoreCase = true) ||
+                            it.achievement.contains(authSearchQuery, ignoreCase = true)
+                }
+            }
+        }
+
+        AlertDialog(
+            onDismissRequest = { showPasswordManagementDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.LockReset,
+                    contentDescription = null,
+                    tint = Color(0xFFDC2626),
+                    modifier = Modifier.size(36.dp)
+                )
+            },
+            title = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "🔐 पासवर्ड नियंत्रण प्राधिकरण",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "छात्र एवं कोच क्रेडेंशियल्स प्रबंधन (Admin Authority)",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 500.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Tab Selector: Students vs Coaches
+                    TabRow(
+                        selectedTabIndex = authHubTab,
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        contentColor = SaffronPrimary
+                    ) {
+                        Tab(
+                            selected = authHubTab == 0,
+                            onClick = { authHubTab = 0 },
+                            text = { Text("🎓 छात्र (${allStudents.size})", fontWeight = if (authHubTab == 0) FontWeight.Bold else FontWeight.Normal) }
+                        )
+                        Tab(
+                            selected = authHubTab == 1,
+                            onClick = { authHubTab = 1 },
+                            text = { Text("🏋️ कोच (${activeCoachesList.size})", fontWeight = if (authHubTab == 1) FontWeight.Bold else FontWeight.Normal) }
+                        )
+                    }
+
+                    // Search input
+                    OutlinedTextField(
+                        value = authSearchQuery,
+                        onValueChange = { authSearchQuery = it },
+                        placeholder = {
+                            Text(if (authHubTab == 0) "छात्र नाम, JBA आईडी या मोबाइल से खोजें..." else "कोच नाम या ID से खोजें...")
+                        },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = SaffronPrimary) },
+                        trailingIcon = {
+                            if (authSearchQuery.isNotEmpty()) {
+                                IconButton(onClick = { authSearchQuery = "" }) {
+                                    Icon(Icons.Default.Close, contentDescription = null)
+                                }
+                            }
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("input_auth_hub_search")
+                    )
+
+                    // List based on Tab
+                    if (authHubTab == 0) {
+                        // Students List
+                        if (filteredStudentList.isEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(24.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("कोई छात्र नहीं मिला", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f, fill = false),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(filteredStudentList) { s ->
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(10.dp),
+                                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(10.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Surface(
+                                                        color = SaffronContainer,
+                                                        shape = RoundedCornerShape(4.dp)
+                                                    ) {
+                                                        Text(
+                                                            text = s.studentId,
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = OnSaffronContainer,
+                                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                                        )
+                                                    }
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                    Text(
+                                                        text = s.fullName,
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                Text(
+                                                    text = "मो.: ${s.mobileNumber} • ${s.village}",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+
+                                            Button(
+                                                onClick = {
+                                                    showPasswordManagementDialog = false
+                                                    studentForPasswordReset = s
+                                                },
+                                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626)),
+                                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                                                shape = RoundedCornerShape(6.dp),
+                                                modifier = Modifier.testTag("btn_hub_reset_student_${s.studentId}")
+                                            ) {
+                                                Icon(Icons.Default.LockReset, contentDescription = null, modifier = Modifier.size(14.dp))
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text("पासवर्ड बदलें", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // Coaches List
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f, fill = false),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(filteredCoachesList) { coach ->
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(10.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(10.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Surface(
+                                                    color = OliveTertiary.copy(alpha = 0.15f),
+                                                    shape = RoundedCornerShape(4.dp)
+                                                ) {
+                                                    Text(
+                                                        text = coach.coachId.ifEmpty { "COACH" },
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = OliveTertiary,
+                                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(
+                                                    text = coach.name,
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text(
+                                                text = coach.achievement.ifEmpty { coach.serviceBackground.ifEmpty { "प्रशिक्षक" } },
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+
+                                        Button(
+                                            onClick = {
+                                                showPasswordManagementDialog = false
+                                                coachForPasswordReset = coach
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = SaffronPrimary),
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                                            shape = RoundedCornerShape(6.dp),
+                                            modifier = Modifier.testTag("btn_hub_reset_coach_${coach.coachId}")
+                                        ) {
+                                            Icon(Icons.Default.LockReset, contentDescription = null, modifier = Modifier.size(14.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("पासवर्ड बदलें", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showPasswordManagementDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = OliveTertiary)
+                ) {
+                    Text("पूर्ण (Done)")
+                }
             }
         )
     }

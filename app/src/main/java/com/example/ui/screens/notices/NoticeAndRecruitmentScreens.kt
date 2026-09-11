@@ -131,7 +131,7 @@ fun NoticeBoardScreen(
                                     fontWeight = FontWeight.ExtraBold
                                 )
                                 Text(
-                                    text = "जय बजरंग अखाड़ा, मौरिकला गुफा",
+                                    text = "जय बजरंग अखाड़ा, मौरीकला (गुफा)",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

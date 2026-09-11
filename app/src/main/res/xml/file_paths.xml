@@ -3,4 +3,6 @@
     <cache-path name="reports" path="reports/" />
     <cache-path name="shared_pdf" path="." />
     <files-path name="reports_files" path="reports/" />
+    <files-path name="topic_docs" path="topic_documents/" />
+    <files-path name="all_files" path="." />
 </paths>

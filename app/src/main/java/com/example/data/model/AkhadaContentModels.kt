@@ -11,7 +11,7 @@ data class Trainer(
     val experience: String, // e.g. "अनुभव: 8+ वर्ष"
     val serviceBackground: String, // e.g. "पूर्व सैन्य / खेल प्रशिक्षक"
     val specialization: String, // e.g. "1600m रनिंग, फिजिकल एंड्योरेंस, ग्राउंड ट्रेनिंग"
-    val introduction: String, // e.g. "मौरिकला गुफा अखाड़े में युवाओं को अनुशासित प्रशिक्षण"
+    val introduction: String, // e.g. "मौरीकला (गुफा) अखाड़े में युवाओं को अनुशासित प्रशिक्षण"
     val contactNumber: String = "",
     val displayOrder: Int = 1,
     val coachId: String = "", // e.g. "JBA-COACH-001"
@@ -51,10 +51,10 @@ data class SuccessStory(
 data class ContactInfo(
     @PrimaryKey val id: Long = 1, // Single active record
     val organisation: String = "जय बजरंग अखाड़ा – गांव से सेना/पुलिस भर्ती अभियान",
-    val trainingCentre: String = "जय बजरंग अखाड़ा – मौरीकला गुफा",
+    val trainingCentre: String = "जय बजरंग अखाड़ा – मौरीकला (गुफा)",
     val contactPerson: String = "मुख्य प्रशिक्षक / अखाड़ा संचालक",
     val mobile: String = "9876543210",
-    val address: String = "मौरिकला गुफा, ग्राम मौरिकला, ब्लॉक व जिला",
+    val address: String = "मौरीकला (गुफा), ग्राम मौरीकला, ब्लॉक व जिला",
     val whatsapp: String = "9876543210",
     val workingHours: String = "प्रातः 05:00 - 08:30 | सायं 04:30 - 07:30"
 )

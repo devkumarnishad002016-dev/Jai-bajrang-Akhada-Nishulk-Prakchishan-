@@ -103,6 +103,7 @@ fun MainApp(viewModel: MainViewModel) {
     val selectedSubject by viewModel.selectedSubject.collectAsState()
     val allSubjects by viewModel.allSubjects.collectAsState()
     val allTopics by viewModel.allTopics.collectAsState()
+    val allTopicDocuments by viewModel.allTopicDocuments.collectAsState()
     val allQuestions by viewModel.allQuestions.collectAsState()
     val studentStudyAttempts by viewModel.studentStudyAttempts.collectAsState()
     val allMockTests by viewModel.allMockTests.collectAsState()
@@ -289,6 +290,12 @@ fun MainApp(viewModel: MainViewModel) {
                             remarks = rem
                         )
                     },
+                    onDeleteStatusForDate = { date ->
+                        viewModel.deleteAttendanceForDate(
+                            studentId = activeStudent?.studentId ?: "JBA-2026-001",
+                            date = date
+                        )
+                    },
                     onNavigateToChat = { navController.navigate("coach_chat") }
                 )
             }
@@ -346,6 +353,7 @@ fun MainApp(viewModel: MainViewModel) {
                     allTopics = allTopics,
                     allQuestions = allQuestions,
                     studentStudyAttempts = studentStudyAttempts,
+                    allTopicDocuments = allTopicDocuments,
                     selectedSubject = selectedSubject,
                     onSelectSubject = { sub -> viewModel.setSelectedSubject(sub) },
                     onToggleChapter = { ch -> viewModel.toggleChapterCompletion(ch) },
@@ -545,6 +553,9 @@ fun MainApp(viewModel: MainViewModel) {
                     onAddTrainer = { trainer -> viewModel.addTrainer(trainer) },
                     onDeleteTrainer = { trainer -> viewModel.deleteTrainer(trainer) },
                     onUpdateTrainer = { trainer -> viewModel.updateTrainer(trainer) },
+                    onResetTrainerPassword = { coachId, newPassword ->
+                        viewModel.adminResetCoachPassword(coachId, newPassword)
+                    },
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
@@ -589,6 +600,7 @@ fun MainApp(viewModel: MainViewModel) {
                     cloudSyncStatus = cloudSyncStatus,
                     allAttendanceRecords = allAttendanceRecords,
                     allTrainingRecords = allTrainingRecords,
+                    allTrainers = allTrainers,
                     onTriggerSync = { viewModel.triggerCloudSync() },
                     onAssignTrainer = { studentId, trainerId, trainerName, batchName ->
                         viewModel.assignTrainerAndBatch(studentId, trainerId, trainerName, batchName)
@@ -597,6 +609,12 @@ fun MainApp(viewModel: MainViewModel) {
                         viewModel.recordGroundPhysicalPerformance(
                             studentId, time1600m, pushups, situps, pullups, longJumpFeet, highJumpFeet, shotPutMeters, coachNotes
                         )
+                    },
+                    onResetStudentPassword = { studentId, newPassword ->
+                        viewModel.adminResetStudentPassword(studentId, newPassword)
+                    },
+                    onResetCoachPassword = { coachId, newPassword ->
+                        viewModel.adminResetCoachPassword(coachId, newPassword)
                     },
                     onNavigate = { route -> navController.navigate(route) },
                     onAddStudent = { student -> viewModel.addStudent(student) }
@@ -613,6 +631,9 @@ fun MainApp(viewModel: MainViewModel) {
                         onAddTrainer = { t -> viewModel.addTrainer(t) },
                         onDeleteTrainer = { t -> viewModel.deleteTrainer(t) },
                         onUpdateTrainer = { t -> viewModel.updateTrainer(t) },
+                        onResetTrainerPassword = { coachId, newPassword ->
+                            viewModel.adminResetCoachPassword(coachId, newPassword)
+                        },
                         onAddGalleryItem = { g -> viewModel.addGalleryItem(g) },
                         onDeleteGalleryItem = { g -> viewModel.deleteGalleryItem(g) },
                         onAddSuccessStory = { s -> viewModel.addSuccessStory(s) },
@@ -676,12 +697,47 @@ fun MainApp(viewModel: MainViewModel) {
                         allQuestions = allQuestions,
                         allSubjects = allSubjects,
                         allTopics = allTopics,
+                        allTopicDocuments = allTopicDocuments,
                         onAddQuestion = { q -> viewModel.addQuestion(q) },
                         onUpdateQuestion = { q -> viewModel.updateQuestion(q) },
                         onDeleteQuestion = { q -> viewModel.deleteQuestion(q) },
                         onToggleActive = { q -> viewModel.toggleQuestionActive(q) },
                         onAddSubject = { s -> viewModel.addSubject(s) },
+                        onUpdateSubject = { s -> viewModel.updateSubject(s) },
+                        onDeleteSubject = { s -> viewModel.deleteSubject(s) },
                         onAddTopic = { t -> viewModel.addTopic(t) },
+                        onUpdateTopic = { t -> viewModel.updateTopic(t) },
+                        onDeleteTopic = { t -> viewModel.deleteTopic(t) },
+                        onAddTopicDocument = { d -> viewModel.addTopicDocument(d) },
+                        onDeleteTopicDocument = { d, ctx -> viewModel.deleteTopicDocument(d, ctx) },
+                        onUploadTopicFile = { ctx, uri, tId, sId, title, desc, fType, onSucc, onErr ->
+                            viewModel.uploadTopicFile(ctx, uri, tId, sId, title, desc, fType, onSucc, onErr)
+                        },
+                        onNavigateToTopicCms = { navController.navigate("admin_topic_management") },
+                        onBack = { navController.popBackStack() }
+                    )
+                } else {
+                    LaunchedEffect(Unit) {
+                        navController.popBackStack()
+                    }
+                }
+            }
+
+            composable("admin_topic_management") {
+                if (RolePermissionManager.isAdmin(currentRole) || RolePermissionManager.isTrainer(currentRole)) {
+                    AdminTopicManagementScreen(
+                        allSubjects = allSubjects,
+                        allTopics = allTopics,
+                        allQuestions = allQuestions,
+                        allTopicDocuments = allTopicDocuments,
+                        onAddTopic = { t -> viewModel.addTopic(t) },
+                        onUpdateTopic = { t -> viewModel.updateTopic(t) },
+                        onDeleteTopic = { t -> viewModel.deleteTopic(t) },
+                        onAddTopicDocument = { d -> viewModel.addTopicDocument(d) },
+                        onDeleteTopicDocument = { d, ctx -> viewModel.deleteTopicDocument(d, ctx) },
+                        onUploadTopicFile = { ctx, uri, tId, sId, title, desc, fType, onSucc, onErr ->
+                            viewModel.uploadTopicFile(ctx, uri, tId, sId, title, desc, fType, onSucc, onErr)
+                        },
                         onBack = { navController.popBackStack() }
                     )
                 } else {

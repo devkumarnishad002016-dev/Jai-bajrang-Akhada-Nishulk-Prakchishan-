@@ -102,7 +102,7 @@ fun AdminCommunicationScreen(
         QuickTemplate(
             label = "🏃 1600m ट्रायल रिमाइंडर",
             title = "कल प्रातः 1600m स्पीड ट्रायल व बीम टेस्ट",
-            message = "कल सुबह ठीक 05:15 बजे मौरिकला ग्राउंड पर 1600m का टाइम ट्रायल होगा। सभी कैडेट्स समय पर ग्राउंड पर उपस्थित रहें।",
+            message = "कल सुबह ठीक 05:15 बजे मौरीकला (गुफा) ग्राउंड पर 1600m का टाइम ट्रायल होगा। सभी कैडेट्स समय पर ग्राउंड पर उपस्थित रहें।",
             category = AppNotification.CATEGORY_TRAINING_REMINDER,
             route = "ground_training",
             urgent = true

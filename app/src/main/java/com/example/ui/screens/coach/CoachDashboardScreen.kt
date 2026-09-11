@@ -116,7 +116,7 @@ fun CoachDashboardScreen(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "जय बजरंग अखाड़ा — मौरिकला गुफा",
+                            text = "जय बजरंग अखाड़ा — मौरीकला (गुफा)",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

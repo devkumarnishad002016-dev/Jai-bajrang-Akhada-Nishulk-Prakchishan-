@@ -47,7 +47,7 @@ class StudentProfilePersistenceStressTest {
             fullName = "देवकुमार निषाद",
             fatherName = "श्री रामकुमार निषाद",
             mobileNumber = "9876543210",
-            village = "मौरिकला (गुफा)",
+            village = "मौरीकला (गुफा)",
             dob = "2004-05-15",
             age = 21,
             gender = "Male",

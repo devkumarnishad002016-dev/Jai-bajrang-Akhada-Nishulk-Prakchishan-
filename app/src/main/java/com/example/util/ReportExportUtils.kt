@@ -154,9 +154,9 @@ object ReportExportUtils {
             </head>
             <body>
                 <div class="header-box">
-                    <h1 class="title">जय बजरंग अखाड़ा, मौरिकला गुफा</h1>
+                    <h1 class="title">जय बजरंग अखाड़ा, मौरीकला (गुफा)</h1>
                     <div class="subtitle">गाँव से सेना–पुलिस भर्ती अभियान • शारीरिक व लिखित मूल्यांकन पत्रक</div>
-                    <div class="tagline">दिनांक: $printDate | स्थान: मौरिकला गुफा ग्राउंड, आरंग-महासमुंद रोड</div>
+                    <div class="tagline">दिनांक: $printDate | स्थान: मौरीकला (गुफा) ग्राउंड, आरंग-महासमुंद रोड</div>
                 </div>
 
                 <div class="student-card">
@@ -283,7 +283,7 @@ object ReportExportUtils {
         }
 
         val summary = """
-            🚩 *जय बजरंग अखाड़ा, मौरिकला गुफा* 🚩
+            🚩 *जय बजरंग अखाड़ा, मौरीकला (गुफा)* 🚩
             *कैडेट मासिक प्रगति पत्रक (Progress Report)*
             ------------------------------------
             👤 *नाम:* ${student.fullName}

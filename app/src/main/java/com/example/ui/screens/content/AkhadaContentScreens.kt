@@ -20,8 +20,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -78,7 +81,7 @@ fun AboutAkhadaScreen(
                     ) {
                         Text("🚩 जय बजरंग अखाड़ा", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = SaffronDark)
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text("मौरीकला गुफा • गांव से सेना/पुलिस भर्ती अभियान", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                        Text("मौरीकला (गुफा) • गांव से सेना/पुलिस भर्ती अभियान", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
                         Spacer(modifier = Modifier.height(8.dp))
                         Surface(
                             color = SaffronPrimary,
@@ -107,7 +110,7 @@ fun AboutAkhadaScreen(
                         Text("अभियान का परिचय", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = SaffronDark)
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "जय बजरंग अखाड़ा (मौरिकला गुफा) ग्रामीण क्षेत्र के युवाओं को भारतीय सेना (Indian Army - Agniveer), राज्य पुलिस (Police Constable), केंद्रीय सशस्त्र पुलिस बलों (CAPF - SSC GD, CRPF, BSF, CISF, ITBP, SSB) तथा अन्य सरकारी सुरक्षा बलों में चयन हेतु समर्पित एक निःशुल्क सेवा अभियान है।",
+                            text = "जय बजरंग अखाड़ा (मौरीकला (गुफा)) ग्रामीण क्षेत्र के युवाओं को भारतीय सेना (Indian Army - Agniveer), राज्य पुलिस (Police Constable), केंद्रीय सशस्त्र पुलिस बलों (CAPF - SSC GD, CRPF, BSF, CISF, ITBP, SSB) तथा अन्य सरकारी सुरक्षा बलों में चयन हेतु समर्पित एक निःशुल्क सेवा अभियान है।",
                             style = MaterialTheme.typography.bodyMedium,
                             lineHeight = 22.sp
                         )
@@ -283,7 +286,7 @@ fun MissionScreen(
 }
 
 // ==========================================
-// 3. TRAINING CENTRE (मौरीकला गुफा प्रशिक्षण केंद्र)
+// 3. TRAINING CENTRE (मौरीकला (गुफा) प्रशिक्षण केंद्र)
 // ==========================================
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -330,7 +333,7 @@ fun TrainingCentreScreen(
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text("मुख्य प्रशिक्षण केंद्र", fontSize = 12.sp, color = SaffronPrimary, fontWeight = FontWeight.Bold)
-                                Text("जय बजरंग अखाड़ा – मौरीकला गुफा", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+                                Text("जय बजरंग अखाड़ा – मौरीकला (गुफा)", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
                             }
                         }
 
@@ -354,7 +357,7 @@ fun TrainingCentreScreen(
                         Spacer(modifier = Modifier.height(14.dp))
 
                         Text(
-                            text = "मौरिकला गुफा ग्राउंड में नियमित रूप से प्रातःकालीन दौड़, बीम (पुल-अप्स), लॉन्ग जंप, शारीरिक एंड्योरेंस और लिखित परीक्षा की कक्षाएं आयोजित की जाती हैं। सभी ग्रामीण युवाओं के लिए प्रवेश और मार्गदर्शन पूर्णतः निःशुल्क है।",
+                            text = "मौरीकला (गुफा) ग्राउंड में नियमित रूप से प्रातःकालीन दौड़, बीम (पुल-अप्स), लॉन्ग जंप, शारीरिक एंड्योरेंस और लिखित परीक्षा की कक्षाएं आयोजित की जाती हैं। सभी ग्रामीण युवाओं के लिए प्रवेश और मार्गदर्शन पूर्णतः निःशुल्क है।",
                             style = MaterialTheme.typography.bodyMedium,
                             lineHeight = 22.sp
                         )
@@ -414,11 +417,13 @@ fun TrainersScreen(
     isAdmin: Boolean = false,
     onAddTrainer: (Trainer) -> Unit = {},
     onDeleteTrainer: (Trainer) -> Unit = {},
-    onUpdateTrainer: (Trainer) -> Unit = {}
+    onUpdateTrainer: (Trainer) -> Unit = {},
+    onResetTrainerPassword: (coachId: String, newPassword: String) -> Result<Unit> = { _, _ -> Result.success(Unit) }
 ) {
     var showAddTrainerDialog by remember { mutableStateOf(false) }
     var trainerToDelete by remember { mutableStateOf<Trainer?>(null) }
     var trainerToEdit by remember { mutableStateOf<Trainer?>(null) }
+    var trainerForPasswordReset by remember { mutableStateOf<Trainer?>(null) }
 
     // Add Trainer Form States
     var newTrainerName by remember { mutableStateOf("") }
@@ -502,7 +507,7 @@ fun TrainersScreen(
                         Text("जय बजरंग अखाड़ा प्रशिक्षक दल", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            "मौरिकला गुफा अखाड़े में संचालक देव कुमार निषाद एवं अधिकृत प्रशिक्षकों द्वारा युवाओं को ग्राउंड पर प्रत्यक्ष मार्गदर्शन दिया जाता है।",
+                            "मौरीकला (गुफा) अखाड़े में संचालक देव कुमार निषाद एवं अधिकृत प्रशिक्षकों द्वारा युवाओं को ग्राउंड पर प्रत्यक्ष मार्गदर्शन दिया जाता है।",
                             textAlign = TextAlign.Center,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -605,6 +610,18 @@ fun TrainersScreen(
                                     Text(trainer.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                                     if (isAdmin) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
+                                            IconButton(
+                                                onClick = { trainerForPasswordReset = trainer },
+                                                modifier = Modifier
+                                                    .size(32.dp)
+                                                    .testTag("btn_trainers_screen_reset_pass_${trainer.coachId}")
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.LockReset,
+                                                    contentDescription = "Reset Coach Password",
+                                                    tint = Color(0xFFDC2626)
+                                                )
+                                            }
                                             IconButton(
                                                 onClick = { trainerToEdit = trainer },
                                                 modifier = Modifier.size(32.dp)
@@ -899,6 +916,200 @@ fun TrainersScreen(
             },
             dismissButton = {
                 TextButton(onClick = { trainerToEdit = null }) {
+                    Text("रद्द करें")
+                }
+            }
+        )
+    }
+
+    // Reset Coach Password Dialog for Admin
+    trainerForPasswordReset?.let { coach ->
+        val context = LocalContext.current
+        var newPass by remember { mutableStateOf("") }
+        var confirmPass by remember { mutableStateOf("") }
+        var isPasswordVisible by remember { mutableStateOf(false) }
+        var resetError by remember { mutableStateOf<String?>(null) }
+
+        AlertDialog(
+            onDismissRequest = { trainerForPasswordReset = null },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.LockReset,
+                    contentDescription = null,
+                    tint = Color(0xFFDC2626),
+                    modifier = Modifier.size(32.dp)
+                )
+            },
+            title = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "कोच पासवर्ड रीसेट व संपादन",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "एडमिन प्राधिकरण (Admin Authority)",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Surface(
+                        color = SaffronContainer.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = coach.name,
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Surface(
+                                    color = SaffronPrimary,
+                                    shape = RoundedCornerShape(6.dp)
+                                ) {
+                                    Text(
+                                        text = coach.coachId.ifEmpty { "COACH" },
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "अनुभव / विशेषज्ञता: ${coach.experience.ifEmpty { coach.specialization.ifEmpty { "प्रशिक्षक" } }}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    if (resetError != null) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.errorContainer,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = resetError ?: "",
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(8.dp)
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = "⚡ त्वरित डिफ़ॉल्ट चुनें (Quick Presets):",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        SuggestionChip(
+                            onClick = {
+                                newPass = "Coach@123456"
+                                confirmPass = "Coach@123456"
+                                resetError = null
+                            },
+                            label = { Text("Coach@123456", style = MaterialTheme.typography.labelSmall) },
+                            modifier = Modifier.weight(1f)
+                        )
+                        SuggestionChip(
+                            onClick = {
+                                newPass = "JBA@Coach2026"
+                                confirmPass = "JBA@Coach2026"
+                                resetError = null
+                            },
+                            label = { Text("JBA@Coach2026", style = MaterialTheme.typography.labelSmall) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    OutlinedTextField(
+                        value = newPass,
+                        onValueChange = {
+                            newPass = it
+                            resetError = null
+                        },
+                        label = { Text("नया पासवर्ड (New Password)") },
+                        singleLine = true,
+                        visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                                Icon(
+                                    imageVector = if (isPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = "Toggle Visibility"
+                                )
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("input_trainers_screen_new_pass")
+                    )
+
+                    OutlinedTextField(
+                        value = confirmPass,
+                        onValueChange = {
+                            confirmPass = it
+                            resetError = null
+                        },
+                        label = { Text("पासवर्ड पुष्टि करें (Confirm Password)") },
+                        singleLine = true,
+                        visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("input_trainers_screen_confirm_pass")
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val trimmed = newPass.trim()
+                        if (trimmed.isEmpty()) {
+                            resetError = "कृपया नया पासवर्ड दर्ज करें या त्वरित बटन चुनें।"
+                        } else if (trimmed.length < 6) {
+                            resetError = "पासवर्ड कम से कम 6 अक्षरों का होना चाहिए।"
+                        } else if (trimmed != confirmPass.trim()) {
+                            resetError = "पासवर्ड और पुष्टि पासवर्ड मेल नहीं खाते।"
+                        } else {
+                            val coachIdToUpdate = coach.coachId.ifEmpty { coach.id.toString() }
+                            val result = onResetTrainerPassword(coachIdToUpdate, trimmed)
+                            if (result.isSuccess) {
+                                val successMsg = "कोच ${coach.name} का नया पासवर्ड सफलतापूर्वक सेट हो गया: $trimmed"
+                                android.widget.Toast.makeText(context, successMsg, android.widget.Toast.LENGTH_LONG).show()
+                                trainerForPasswordReset = null
+                            } else {
+                                resetError = result.exceptionOrNull()?.message ?: "पासवर्ड अपडेट करने में त्रुटि हुई।"
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = SaffronPrimary),
+                    modifier = Modifier.testTag("btn_confirm_trainers_screen_pass")
+                ) {
+                    Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("पासवर्ड सहेजें (Save)")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { trainerForPasswordReset = null }) {
                     Text("रद्द करें")
                 }
             }

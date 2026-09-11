@@ -34,9 +34,10 @@ import kotlinx.coroutines.launch
         RaceSession::class,
         RaceResult::class,
         AppNotification::class,
-        OutboxEntity::class
+        OutboxEntity::class,
+        TopicDocument::class
     ],
-    version = 12,
+    version = 13,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -148,6 +149,31 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `topic_documents` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `topicId` TEXT NOT NULL,
+                        `subjectId` TEXT NOT NULL,
+                        `title` TEXT NOT NULL,
+                        `fileName` TEXT NOT NULL,
+                        `fileType` TEXT NOT NULL,
+                        `filePath` TEXT NOT NULL,
+                        `fileSize` TEXT NOT NULL,
+                        `uploadDate` TEXT NOT NULL,
+                        `description` TEXT NOT NULL,
+                        `downloadCount` INTEGER NOT NULL DEFAULT 0,
+                        `isPublished` INTEGER NOT NULL DEFAULT 1,
+                        `timestamp` INTEGER NOT NULL DEFAULT 0
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_topic_documents_topicId` ON `topic_documents` (`topicId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_topic_documents_subjectId` ON `topic_documents` (`subjectId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_topic_documents_fileType` ON `topic_documents` (`fileType`)")
+            }
+        }
+
         fun getDatabase(context: Context, scope: CoroutineScope): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -161,7 +187,8 @@ abstract class AppDatabase : RoomDatabase() {
                     MIGRATION_8_9,
                     MIGRATION_9_10,
                     MIGRATION_10_11,
-                    MIGRATION_11_12
+                    MIGRATION_11_12,
+                    MIGRATION_12_13
                 )
                 .addCallback(DatabaseCallback(scope))
                 .build()

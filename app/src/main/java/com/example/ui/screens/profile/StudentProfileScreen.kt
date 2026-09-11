@@ -267,7 +267,7 @@ fun StudentProfileScreen(
                             DetailRow("जन्मतिथि (DOB)", AdminSecurityManager.ADMIN_DOB)
                             DetailRow("मोबाइल नंबर", AdminSecurityManager.ADMIN_MOBILE)
                             DetailRow("सुरक्षा स्थिति", "गोपनीय पासवर्ड एवं पिन सुरक्षित (Encrypted)")
-                            DetailRow("संस्था", "जय बजरंग अखाड़ा, मौरिकला गुफा")
+                            DetailRow("संस्था", "जय बजरंग अखाड़ा, मौरीकला (गुफा)")
                             DetailRow("प्रबंधन", "प्रशिक्षकों का प्रबंधन, उपस्थिति एवं परिणाम")
                         }
                     }
@@ -652,7 +652,7 @@ fun StudentProfileScreen(
                             DetailRow("शैक्षणिक योग्यता (Education)", s.education)
                             DetailRow("भर्ती लक्ष्य (Target Mission)", s.recruitmentGoal)
                             DetailRow("नामांकन तिथि (Joining Date)", s.joinDate)
-                            DetailRow("संस्था", "जय बजरंग अखाड़ा, मौरिकला गुफा")
+                            DetailRow("संस्था", "जय बजरंग अखाड़ा, मौरीकला (गुफा)")
                         }
                     }
                 }

@@ -40,7 +40,7 @@ object ParentProgressEngine {
     ): ParentProgressReport {
         val name = student?.fullName ?: "कैडेट"
         val father = student?.fatherName?.ifBlank { "अभिभावक" } ?: "अभिभावक"
-        val village = student?.village?.ifBlank { "मौरिकला गुफा" } ?: "मौरिकला गुफा"
+        val village = student?.village?.ifBlank { "मौरीकला (गुफा)" } ?: "मौरीकला (गुफा)"
         val goal = when (student?.recruitmentGoal) {
             "Indian Army" -> "भारतीय थल सेना (Indian Army Agniveer GD)"
             "CG Police" -> "छत्तीसगढ़ पुलिस आरक्षक भर्ती"
@@ -91,7 +91,7 @@ object ParentProgressEngine {
 
         val coachMsg = """
             आदरणीय ${father} जी,
-            जय बजरंग अखाड़ा, मौरिकला गुफा में आपके सुपुत्र/सुपुत्री '${name}' का प्रशिक्षण निरंतर जारी है।
+            जय बजरंग अखाड़ा, मौरीकला (गुफा) में आपके सुपुत्र/सुपुत्री '${name}' का प्रशिक्षण निरंतर जारी है।
             कैडेट में वर्दी पहनने का गहरा जज्बा और मेहनत का उत्साह है।
             घर पर समय पर खान-पान (चना, गुड़, दूध) और रात को समय पर सोने का विशेष ध्यान रखें ताकि ग्राउंड पर शरीर को पूरी ऊर्जा मिल सके।
         """.trimIndent()
