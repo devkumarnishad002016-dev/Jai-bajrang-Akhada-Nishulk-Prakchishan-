@@ -387,6 +387,12 @@ class AppRepository(
             val existingChapters = dao.getAllChaptersDirect()
             if (existingChapters.isEmpty() || existingChapters.size < 78) {
                 dao.insertChapters(com.example.data.db.SyllabusStudyMaterialData.getAllSyllabusChapters())
+            } else {
+                // Ensure all foundational chapter notes (Chapters 1 to 15 Mathematics) are refreshed in Room DB
+                val updatedChapters = com.example.data.db.SyllabusStudyMaterialData.getAllSyllabusChapters().filter { it.id in 1L..15L }
+                if (updatedChapters.isNotEmpty()) {
+                    dao.insertChapters(updatedChapters)
+                }
             }
 
             // Ensure topics (including detailed subtopics like prime/composite, English, and newly added question bank topics) are seeded

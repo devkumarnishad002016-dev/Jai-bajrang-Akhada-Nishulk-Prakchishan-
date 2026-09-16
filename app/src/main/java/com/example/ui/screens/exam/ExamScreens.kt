@@ -658,8 +658,41 @@ fun ActiveTestScreen(
 
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                    // Grid of question buttons
-                    val chunkedQuestions = questions.indices.chunked(5)
+                    // 50-Question Part Selector for long mock exams
+                    val paletteParts = questions.indices.chunked(50)
+                    var activePalettePart by remember(showPaletteSheet) { mutableIntStateOf(currentIndex / 50) }
+
+                    if (paletteParts.size > 1) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = "50-50 प्रश्न भाग चुनें:",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = SaffronPrimary
+                            )
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                items(paletteParts.size) { pIdx ->
+                                    val partList = paletteParts[pIdx]
+                                    val isSelected = pIdx == activePalettePart
+                                    val startQ = partList.first() + 1
+                                    val endQ = partList.last() + 1
+                                    FilterChip(
+                                        selected = isSelected,
+                                        onClick = { activePalettePart = pIdx },
+                                        label = { Text("भाग ${pIdx + 1} ($startQ-$endQ)", fontSize = 11.sp) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Grid of question buttons for the selected 50-question part
+                    val currentDisplayIndices = if (paletteParts.size > 1) {
+                        paletteParts.getOrElse(activePalettePart) { questions.indices.toList() }
+                    } else {
+                        questions.indices.toList()
+                    }
+                    val chunkedQuestions = currentDisplayIndices.chunked(5)
                     Column(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth()

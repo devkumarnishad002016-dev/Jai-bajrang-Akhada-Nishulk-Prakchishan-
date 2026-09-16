@@ -31,14 +31,14 @@ class TopicCmsAndFileUploadTest {
             fileType = "PDF",
             fileName = "number_system_notes.pdf",
             filePath = "sample/path/number_system_notes.pdf",
-            fileSize = 1024 * 512,
-            pageOrRowCount = 14
+            fileSize = "512 KB",
+            description = "14 पृष्ठ विस्तृत नोट्स"
         )
 
         assertTrue(pdfDoc.isPdf)
         assertFalse(pdfDoc.isExcel)
         assertEquals("PDF", pdfDoc.fileType)
-        assertEquals(14, pdfDoc.pageOrRowCount)
+        assertEquals("512 KB", pdfDoc.fileSize)
 
         val excelDoc = TopicDocument(
             topicId = "TOPIC_PERCENTAGE",
@@ -47,13 +47,13 @@ class TopicCmsAndFileUploadTest {
             fileType = "EXCEL",
             fileName = "percentage_shortcuts.xlsx",
             filePath = "sample/path/percentage_shortcuts.xlsx",
-            fileSize = 1024 * 128,
-            pageOrRowCount = 45
+            fileSize = "128 KB",
+            description = "45 पंक्तियां प्रश्न बैंक"
         )
 
         assertFalse(excelDoc.isPdf)
         assertTrue(excelDoc.isExcel)
-        assertEquals(45, excelDoc.pageOrRowCount)
+        assertEquals("128 KB", excelDoc.fileSize)
     }
 
     @Test
@@ -87,9 +87,9 @@ class TopicCmsAndFileUploadTest {
             क्र.,प्रश्न / विषय,उत्तर / नियम,टिप्पणी
             1,संख्या पद्धति,स्थानीय मान व जातीय मान,महत्वपूर्ण
             2,इकाई अंक,चक्रीयता नियम (2,3,7,8),अवश्य याद रखें
-        """.trimIndent().toByteArray(Charsets.UTF_8)
+        """.trimIndent()
 
-        val parsedRows = TopicFileUtils.parseSpreadsheetRows(csvData)
+        val parsedRows = TopicFileUtils.parseSpreadsheetText(csvData)
         assertEquals(3, parsedRows.size)
         assertEquals(4, parsedRows[0].size)
         assertEquals("संख्या पद्धति", parsedRows[1][1].trim())

@@ -362,6 +362,28 @@ class SyncEngineProductionTest {
         }
         override suspend fun getPendingOutboxCount(): Int =
             outboxList.count { it.syncState == "PENDING" || it.syncState == "IN_PROGRESS" || it.syncState == "TRANSIENT_FAILURE" }
+
+        // Topic documents
+        val topicDocuments = mutableListOf<TopicDocument>()
+        override fun getAllTopicDocuments(): Flow<List<TopicDocument>> = flowOf(topicDocuments)
+        override suspend fun getAllTopicDocumentsDirect(): List<TopicDocument> = topicDocuments.toList()
+        override fun getDocumentsForTopic(topicId: String): Flow<List<TopicDocument>> = flowOf(topicDocuments.filter { it.topicId == topicId })
+        override suspend fun getDocumentsForTopicDirect(topicId: String): List<TopicDocument> = topicDocuments.filter { it.topicId == topicId }
+        override fun getDocumentsForSubject(subjectId: String): Flow<List<TopicDocument>> = flowOf(topicDocuments.filter { it.subjectId == subjectId })
+        override suspend fun insertTopicDocument(doc: TopicDocument): Long {
+            val id = if (doc.id > 0) doc.id else (topicDocuments.size + 1).toLong()
+            topicDocuments.removeAll { it.id == id }
+            topicDocuments.add(doc.copy(id = id))
+            return id
+        }
+        override suspend fun insertTopicDocuments(docs: List<TopicDocument>) { docs.forEach { insertTopicDocument(it) } }
+        override suspend fun updateTopicDocument(doc: TopicDocument) {
+            topicDocuments.removeAll { it.id == doc.id }
+            topicDocuments.add(doc)
+        }
+        override suspend fun deleteTopicDocument(doc: TopicDocument) { topicDocuments.removeAll { it.id == doc.id } }
+        override suspend fun deleteTopicDocumentById(id: Long) { topicDocuments.removeAll { it.id == id } }
+        override suspend fun deleteDocumentsForTopic(topicId: String) { topicDocuments.removeAll { it.topicId == topicId } }
     }
 
     private lateinit var fakeDao: FakeAppDao

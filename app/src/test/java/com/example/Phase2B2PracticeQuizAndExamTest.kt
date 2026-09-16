@@ -174,4 +174,42 @@ class Phase2B2PracticeQuizAndExamTest {
         assertEquals(19, attempt.attemptedCount)
         assertEquals(1, attempt.unattemptedCount)
     }
+
+    @Test
+    fun testQuestionPagination_ChunkedBy50() {
+        // Generate 125 sample questions
+        val sampleList = (1..125).map { num ->
+            Question(
+                questionId = "Q_TEST_$num",
+                subjectId = "SUB_MATH",
+                topicId = "TOPIC_MATH_PERCENT",
+                questionText = "Question $num",
+                optionA = "A",
+                optionB = "B",
+                optionC = "C",
+                optionD = "D",
+                correctOption = 0,
+                correctOptionLetter = "A"
+            )
+        }
+
+        // Test chunking into 50-50 parts
+        val parts = sampleList.chunked(50)
+        assertEquals(3, parts.size)
+        assertEquals(50, parts[0].size)
+        assertEquals(50, parts[1].size)
+        assertEquals(25, parts[2].size)
+
+        // Part 1
+        assertEquals("Q_TEST_1", parts[0].first().questionId)
+        assertEquals("Q_TEST_50", parts[0].last().questionId)
+
+        // Part 2
+        assertEquals("Q_TEST_51", parts[1].first().questionId)
+        assertEquals("Q_TEST_100", parts[1].last().questionId)
+
+        // Part 3
+        assertEquals("Q_TEST_101", parts[2].first().questionId)
+        assertEquals("Q_TEST_125", parts[2].last().questionId)
+    }
 }

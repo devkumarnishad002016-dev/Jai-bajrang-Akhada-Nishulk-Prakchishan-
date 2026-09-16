@@ -169,10 +169,7 @@ object TopicFileUtils {
         val file = ensureFileExistsOnDisk(context, doc)
         return try {
             val lines = file.readLines(Charsets.UTF_8)
-            lines.map { line ->
-                // Simple CSV split handling quotes
-                parseCsvLine(line)
-            }.filter { it.isNotEmpty() }
+            parseSpreadsheetText(lines.joinToString("\n"))
         } catch (e: Exception) {
             listOf(
                 listOf("त्रुटि", "फ़ाइल पढ़ने में असमर्थ"),
@@ -181,7 +178,13 @@ object TopicFileUtils {
         }
     }
 
-    private fun parseCsvLine(line: String): List<String> {
+    fun parseSpreadsheetText(content: String): List<List<String>> {
+        return content.lines()
+            .map { parseCsvLine(it) }
+            .filter { it.isNotEmpty() && (it.size > 1 || it[0].isNotBlank()) }
+    }
+
+    fun parseCsvLine(line: String): List<String> {
         val result = mutableListOf<String>()
         var cur = StringBuilder()
         var inQuotes = false

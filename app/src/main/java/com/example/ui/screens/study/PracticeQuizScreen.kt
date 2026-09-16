@@ -68,7 +68,7 @@ data class PracticeQuizState(
 }
 
 /**
- * Full-screen Interactive Practice Quiz Screen.
+ * Full-screen Interactive Practice Quiz Screen with 50-50 Question Part Partitioning.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,30 +76,65 @@ fun PracticeQuizScreen(
     subject: StudySubject,
     topic: StudyTopic?,
     questions: List<Question>,
+    initialPartIndex: Int = 0,
     onRecordAttempt: (questionId: String, subjectId: String, topicId: String, selectedAnswer: String, isCorrect: Boolean, timeTaken: Int) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var quizState by remember(subject, topic, questions) {
+    // 50-50 Part Partitioning (Sets of 50 questions each)
+    val questionParts = remember(questions) {
+        if (questions.isEmpty()) emptyList()
+        else questions.chunked(50)
+    }
+
+    var currentPartIndex by remember(questions, initialPartIndex) {
+        val maxIdx = (questionParts.size - 1).coerceAtLeast(0)
+        mutableIntStateOf(initialPartIndex.coerceIn(0, maxIdx))
+    }
+
+    val currentPartQuestions = remember(questionParts, currentPartIndex) {
+        questionParts.getOrElse(currentPartIndex) { emptyList() }
+    }
+
+    var quizState by remember(subject, topic, currentPartQuestions) {
         mutableStateOf(
             PracticeQuizState(
                 subject = subject,
                 topic = topic,
-                questions = questions
+                questions = currentPartQuestions
             )
         )
     }
 
     var showExitDialog by remember { mutableStateOf(false) }
+    var showPartSelectorDialog by remember { mutableStateOf(false) }
+
+    fun switchPart(newPartIndex: Int) {
+        if (newPartIndex in questionParts.indices) {
+            currentPartIndex = newPartIndex
+            quizState = PracticeQuizState(
+                subject = subject,
+                topic = topic,
+                questions = questionParts[newPartIndex]
+            )
+        }
+    }
 
     if (quizState.isFinished) {
         PracticeQuizResultScreen(
             state = quizState,
+            currentPartIndex = currentPartIndex,
+            totalParts = questionParts.size,
+            totalQuestionsAcrossParts = questions.size,
+            onNextPart = if (currentPartIndex < questionParts.size - 1) {
+                { switchPart(currentPartIndex + 1) }
+            } else null,
+            onSelectPart = { idx -> switchPart(idx) },
             onReattempt = {
                 quizState = PracticeQuizState(
                     subject = subject,
                     topic = topic,
-                    questions = questions.shuffled()
+                    questions = currentPartQuestions.shuffled()
                 )
             },
             onBackToDashboard = onBack,
@@ -113,99 +148,171 @@ fun PracticeQuizScreen(
             .fillMaxSize()
             .testTag("practice_quiz_screen"),
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = "${subject.icon} ${subject.name}",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1
-                        )
-                        Text(
-                            text = topic?.topicName ?: "संपूर्ण विषय अभ्यास (Subject Practice)",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(
-                        onClick = { showExitDialog = true },
-                        modifier = Modifier.testTag("quiz_back_btn")
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    // Study Mode Toggle
+            Column {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text(
+                                text = "${subject.icon} ${subject.name}",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
+                            )
+                            Text(
+                                text = topic?.topicName ?: "संपूर्ण विषय अभ्यास (Subject Practice)",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
+                            )
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(
+                            onClick = { showExitDialog = true },
+                            modifier = Modifier.testTag("quiz_back_btn")
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    actions = {
+                        // Study Mode Toggle
+                        Surface(
+                            color = if (quizState.isStudyMode) SaffronPrimary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier
+                                .clickable {
+                                    quizState = quizState.copy(isStudyMode = !quizState.isStudyMode)
+                                }
+                        ) {
+                            Text(
+                                text = if (quizState.isStudyMode) "📖 अध्ययन मोड" else "📝 टेस्ट मोड",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = if (quizState.isStudyMode) SaffronPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+                            )
+                        }
+
+                        // Real-time live score counters
+                        Row(
+                            modifier = Modifier.padding(end = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Surface(
+                                color = StatusPresent.copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.Check, contentDescription = null, tint = StatusPresent, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(2.dp))
+                                    Text(
+                                        text = "${quizState.correctCount}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = StatusPresent,
+                                        modifier = Modifier.testTag("quiz_correct_count")
+                                    )
+                                }
+                            }
+
+                            Surface(
+                                color = StatusAbsent.copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.Close, contentDescription = null, tint = StatusAbsent, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(2.dp))
+                                    Text(
+                                        text = "${quizState.incorrectCount}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = StatusAbsent,
+                                        modifier = Modifier.testTag("quiz_incorrect_count")
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+                )
+
+                // 50-50 Part Header Banner (Shown if there are multiple parts)
+                if (questionParts.size > 1) {
                     Surface(
-                        color = if (quizState.isStudyMode) SaffronPrimary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant,
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier
-                            .clickable {
-                                quizState = quizState.copy(isStudyMode = !quizState.isStudyMode)
-                            }
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                        tonalElevation = 2.dp,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(
-                            text = if (quizState.isStudyMode) "📖 अध्ययन मोड" else "📝 टेस्ट मोड",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = if (quizState.isStudyMode) SaffronPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
-                        )
-                    }
-
-                    // Real-time live score counters
-                    Row(
-                        modifier = Modifier.padding(end = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Surface(
-                            color = StatusPresent.copy(alpha = 0.15f),
-                            shape = RoundedCornerShape(6.dp)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(Icons.Default.Check, contentDescription = null, tint = StatusPresent, modifier = Modifier.size(14.dp))
-                                Spacer(modifier = Modifier.width(2.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Surface(
+                                    color = SaffronPrimary,
+                                    shape = RoundedCornerShape(6.dp)
+                                ) {
+                                    Text(
+                                        text = "भाग ${currentPartIndex + 1} / ${questionParts.size}",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                val partStart = currentPartIndex * 50 + 1
+                                val partEnd = minOf((currentPartIndex + 1) * 50, questions.size)
                                 Text(
-                                    text = "${quizState.correctCount}",
+                                    text = "प्रश्न $partStart - $partEnd (कुल ${questions.size})",
                                     style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = StatusPresent,
-                                    modifier = Modifier.testTag("quiz_correct_count")
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                        }
 
-                        Surface(
-                            color = StatusAbsent.copy(alpha = 0.15f),
-                            shape = RoundedCornerShape(6.dp)
-                        ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(Icons.Default.Close, contentDescription = null, tint = StatusAbsent, modifier = Modifier.size(14.dp))
-                                Spacer(modifier = Modifier.width(2.dp))
-                                Text(
-                                    text = "${quizState.incorrectCount}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = StatusAbsent,
-                                    modifier = Modifier.testTag("quiz_incorrect_count")
-                                )
+                                IconButton(
+                                    onClick = { switchPart(currentPartIndex - 1) },
+                                    enabled = currentPartIndex > 0,
+                                    modifier = Modifier.size(28.dp).testTag("quiz_prev_part_btn")
+                                ) {
+                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Prev Part", modifier = Modifier.size(16.dp))
+                                }
+
+                                TextButton(
+                                    onClick = { showPartSelectorDialog = true },
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                    modifier = Modifier.height(28.dp).testTag("quiz_switch_part_btn")
+                                ) {
+                                    Text("भाग बदलें ▼", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                }
+
+                                IconButton(
+                                    onClick = { switchPart(currentPartIndex + 1) },
+                                    enabled = currentPartIndex < questionParts.size - 1,
+                                    modifier = Modifier.size(28.dp).testTag("quiz_next_part_btn")
+                                ) {
+                                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next Part", modifier = Modifier.size(16.dp))
+                                }
                             }
                         }
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
-            )
+                }
+            }
         },
         bottomBar = {
             PracticeQuizBottomBar(
@@ -277,6 +384,9 @@ fun PracticeQuizScreen(
         } else {
             PracticeQuizQuestionContent(
                 state = quizState,
+                currentPartIndex = currentPartIndex,
+                totalParts = questionParts.size,
+                totalQuestionsAcrossParts = questions.size,
                 onSelectOption = { letter ->
                     if (!quizState.isCurrentSubmitted) {
                         val newAnswers = quizState.selectedAnswers.toMutableMap()
@@ -290,6 +400,110 @@ fun PracticeQuizScreen(
                 modifier = Modifier.padding(innerPadding)
             )
         }
+    }
+
+    // Part Selector Dialog (Choose from 50-50 parts)
+    if (showPartSelectorDialog) {
+        AlertDialog(
+            onDismissRequest = { showPartSelectorDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Layers, contentDescription = null, tint = SaffronPrimary)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("अभ्यास भाग चुनें (50-50 प्रश्न)", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    item {
+                        Text(
+                            text = "कुल ${questions.size} प्रश्न उपलब्ध हैं। इन्हें 50-50 प्रश्नों के भागों में विभाजित किया गया है ताकि अभ्यास सुगम व प्रभावकारी रहे:",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
+                    items(questionParts.size) { pIdx ->
+                        val isCurrent = pIdx == currentPartIndex
+                        val startQ = pIdx * 50 + 1
+                        val endQ = minOf((pIdx + 1) * 50, questions.size)
+                        val pCount = endQ - startQ + 1
+
+                        Surface(
+                            color = if (isCurrent) SaffronPrimary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(10.dp),
+                            border = if (isCurrent) androidx.compose.foundation.BorderStroke(1.5.dp, SaffronPrimary) else null,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    switchPart(pIdx)
+                                    showPartSelectorDialog = false
+                                }
+                                .testTag("select_part_dialog_item_$pIdx")
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(CircleShape)
+                                            .background(if (isCurrent) SaffronPrimary else NavySecondary.copy(alpha = 0.12f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "${pIdx + 1}",
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isCurrent) Color.White else NavySecondary
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Text(
+                                            text = "भाग ${pIdx + 1}",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = "प्रश्न $startQ से $endQ ($pCount प्रश्न)",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+
+                                if (isCurrent) {
+                                    Surface(
+                                        color = SaffronPrimary,
+                                        shape = RoundedCornerShape(6.dp)
+                                    ) {
+                                        Text(
+                                            text = "सक्रिय",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color.White,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showPartSelectorDialog = false }) {
+                    Text("बंद करें")
+                }
+            }
+        )
     }
 
     if (showExitDialog) {
@@ -323,6 +537,9 @@ fun PracticeQuizScreen(
 @Composable
 fun PracticeQuizQuestionContent(
     state: PracticeQuizState,
+    currentPartIndex: Int = 0,
+    totalParts: Int = 1,
+    totalQuestionsAcrossParts: Int = state.totalQuestions,
     onSelectOption: (String) -> Unit,
     onNavigateQuestion: (Int) -> Unit,
     modifier: Modifier = Modifier
@@ -352,8 +569,9 @@ fun PracticeQuizQuestionContent(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    val partInfo = if (totalParts > 1) " • भाग ${currentPartIndex + 1}/$totalParts (प्रश्न ${currentPartIndex * 50 + state.currentIndex + 1})" else ""
                     Text(
-                        text = "प्रश्न ${state.currentIndex + 1} / ${state.totalQuestions}",
+                        text = "प्रश्न ${state.currentIndex + 1} / ${state.totalQuestions}$partInfo",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = SaffronPrimary,
@@ -694,15 +912,22 @@ fun PracticeQuizBottomBar(
 }
 
 /**
- * Result Screen at the completion of Practice Quiz session.
+ * Result Screen at the completion of Practice Quiz session with 50-50 Part awareness.
  */
 @Composable
 fun PracticeQuizResultScreen(
     state: PracticeQuizState,
+    currentPartIndex: Int = 0,
+    totalParts: Int = 1,
+    totalQuestionsAcrossParts: Int = state.totalQuestions,
+    onNextPart: (() -> Unit)? = null,
+    onSelectPart: ((Int) -> Unit)? = null,
     onReattempt: () -> Unit,
     onBackToDashboard: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showPartResultPartDialog by remember { mutableStateOf(false) }
+
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
@@ -743,11 +968,29 @@ fun PracticeQuizResultScreen(
                     Spacer(modifier = Modifier.height(14.dp))
 
                     Text(
-                        text = "अभ्यास सत्र पूर्ण हुआ! 🎉",
+                        text = if (totalParts > 1) "भाग ${currentPartIndex + 1} पूर्ण हुआ! 🎉" else "अभ्यास सत्र पूर्ण हुआ! 🎉",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
+
+                    if (totalParts > 1) {
+                        val partStart = currentPartIndex * 50 + 1
+                        val partEnd = minOf((currentPartIndex + 1) * 50, totalQuestionsAcrossParts)
+                        Surface(
+                            color = SaffronPrimary.copy(alpha = 0.12f),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.padding(top = 6.dp, bottom = 4.dp)
+                        ) {
+                            Text(
+                                text = "भाग ${currentPartIndex + 1} / $totalParts • प्रश्न $partStart से $partEnd हल किए गए",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = SaffronPrimary,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
 
                     Text(
                         text = "${state.subject?.name ?: "विषय"} • ${state.topic?.topicName ?: "सभी टॉपिक्स"}",
@@ -779,7 +1022,7 @@ fun PracticeQuizResultScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceAround
                     ) {
-                        QuizSummaryStatPill("कुल प्रश्न", "${state.totalQuestions}", MaterialTheme.colorScheme.onSurface)
+                        QuizSummaryStatPill("इस भाग के प्रश्न", "${state.totalQuestions}", MaterialTheme.colorScheme.onSurface)
                         QuizSummaryStatPill("सही (Correct)", "${state.correctCount}", StatusPresent)
                         QuizSummaryStatPill("गलत (Wrong)", "${state.incorrectCount}", StatusAbsent)
                         val unattempted = state.totalQuestions - state.submittedQuestions.size
@@ -830,6 +1073,31 @@ fun PracticeQuizResultScreen(
             }
         }
 
+        // Next 50-Question Part Transition Button (If available)
+        if (onNextPart != null) {
+            item {
+                val nextStart = (currentPartIndex + 1) * 50 + 1
+                val nextEnd = minOf((currentPartIndex + 2) * 50, totalQuestionsAcrossParts)
+                Button(
+                    onClick = onNextPart,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("quiz_next_part_btn"),
+                    colors = ButtonDefaults.buttonColors(containerColor = OliveTertiary),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(vertical = 14.dp)
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "अगला भाग ${currentPartIndex + 2} शुरू करें (प्रश्न $nextStart-$nextEnd) ➔",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+
         // Action Buttons
         item {
             Row(
@@ -844,21 +1112,99 @@ fun PracticeQuizResultScreen(
                 ) {
                     Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("पुनः अभ्यास करें")
+                    Text(if (totalParts > 1) "भाग ${currentPartIndex + 1} पुनः करें" else "पुनः अभ्यास करें")
                 }
 
+                if (totalParts > 1 && onSelectPart != null) {
+                    OutlinedButton(
+                        onClick = { showPartResultPartDialog = true },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors()
+                    ) {
+                        Icon(Icons.Default.Layers, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("अन्य भाग चुनें")
+                    }
+                } else {
+                    Button(
+                        onClick = onBackToDashboard,
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = SaffronPrimary),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.Dashboard, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("डैशबोर्ड पर जाएं")
+                    }
+                }
+            }
+        }
+
+        if (totalParts > 1 && onSelectPart != null) {
+            item {
                 Button(
                     onClick = onBackToDashboard,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = SaffronPrimary),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Icon(Icons.Default.Dashboard, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("डैशबोर्ड पर जाएं")
+                    Text("डैशबोर्ड पर वापस जाएं")
                 }
             }
         }
+    }
+
+    // Result Screen Part Selector Dialog
+    if (showPartResultPartDialog && onSelectPart != null) {
+        AlertDialog(
+            onDismissRequest = { showPartResultPartDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Layers, contentDescription = null, tint = SaffronPrimary)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("अभ्यास भाग चुनें (50-50 प्रश्न)", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(totalParts) { pIdx ->
+                        val isCurr = pIdx == currentPartIndex
+                        val pStart = pIdx * 50 + 1
+                        val pEnd = minOf((pIdx + 1) * 50, totalQuestionsAcrossParts)
+                        Surface(
+                            color = if (isCurr) SaffronPrimary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(10.dp),
+                            border = if (isCurr) androidx.compose.foundation.BorderStroke(1.5.dp, SaffronPrimary) else null,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    showPartResultPartDialog = false
+                                    onSelectPart(pIdx)
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("भाग ${pIdx + 1} (प्रश्न $pStart-$pEnd)", fontWeight = FontWeight.Bold)
+                                if (isCurr) {
+                                    Text("सक्रिय", style = MaterialTheme.typography.labelSmall, color = SaffronPrimary, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showPartResultPartDialog = false }) {
+                    Text("बंद करें")
+                }
+            }
+        )
     }
 }
 

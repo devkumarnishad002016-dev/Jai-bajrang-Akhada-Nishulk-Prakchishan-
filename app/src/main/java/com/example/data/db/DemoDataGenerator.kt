@@ -7,6 +7,7 @@ import com.example.data.db.english.EnglishQuestionBankData
 import com.example.data.db.gk.GkQuestionBankData
 import com.example.data.db.hindi.HindiQuestionBankData
 import com.example.data.db.math.MathQuestionBankData
+import com.example.data.db.math.NumberSystemQuestionBank
 import com.example.data.db.reasoning.ReasoningQuestionBankData
 
 object DemoDataGenerator {
@@ -816,7 +817,7 @@ object DemoDataGenerator {
             isActive = true,
             createdDate = "2026-08-22"
         )
-    ) + ComputerQuestionBankData.getAll400ComputerQuestions() + MathQuestionBankData.getAll400MathQuestions() + ReasoningQuestionBankData.getAll400ReasoningQuestions() + HindiQuestionBankData.getAll400HindiQuestions() + EnglishQuestionBankData.getAll400EnglishQuestions() + GkQuestionBankData.getAll2000GkQuestions()
+    ) + ComputerQuestionBankData.getAll400ComputerQuestions() + MathQuestionBankData.getAll400MathQuestions() + NumberSystemQuestionBank.getAllNumberSystemQuestions() + ReasoningQuestionBankData.getAll400ReasoningQuestions() + HindiQuestionBankData.getAll400HindiQuestions() + EnglishQuestionBankData.getAll400EnglishQuestions() + GkQuestionBankData.getAll2000GkQuestions()
 
     fun getSampleStudyAttempts(): List<StudyAttempt> = emptyList()
 

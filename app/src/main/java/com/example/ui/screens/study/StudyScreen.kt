@@ -51,6 +51,7 @@ fun StudyScreen(
     var selectedSubjectDetail by remember { mutableStateOf<StudySubject?>(null) }
     var practiceTopic by remember { mutableStateOf<StudyTopic?>(null) }
     var practiceSubject by remember { mutableStateOf<StudySubject?>(null) }
+    var practiceInitialPartIndex by remember { mutableIntStateOf(0) }
     var selectedChapterForDetail by remember { mutableStateOf<Chapter?>(null) }
     var chapterSearchQuery by remember { mutableStateOf("") }
 
@@ -289,19 +290,75 @@ fun StudyScreen(
                                 )
                             }
 
-                            Button(
-                                onClick = {
-                                    practiceSubject = subject
-                                    practiceTopic = null
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = SaffronPrimary),
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Button(
+                                    onClick = {
+                                        practiceSubject = subject
+                                        practiceTopic = null
+                                        practiceInitialPartIndex = 0
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = SaffronPrimary),
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                    modifier = Modifier.testTag("practice_subject_${subject.subjectId}")
+                                ) {
+                                    Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("संपूर्ण विषय अभ्यास", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+
+                        // 50-50 Part Quick Launch for Subject (If > 50 questions)
+                        val subjectParts = subjectQuestions.chunked(50)
+                        if (subjectParts.size > 1) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Surface(
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                                 shape = RoundedCornerShape(8.dp),
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                                modifier = Modifier.testTag("practice_subject_${subject.subjectId}")
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("संपूर्ण विषय अभ्यास", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                Column(modifier = Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "📑 50-50 प्रश्न अभ्यास भाग (${subjectParts.size} भाग):",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = SaffronPrimary
+                                        )
+                                        Text(
+                                            text = "कुल ${subjectQuestions.size} प्रश्न",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+
+                                    LazyRow(
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        items(subjectParts.size) { pIdx ->
+                                            val startQ = pIdx * 50 + 1
+                                            val endQ = minOf((pIdx + 1) * 50, subjectQuestions.size)
+                                            FilledTonalButton(
+                                                onClick = {
+                                                    practiceSubject = subject
+                                                    practiceTopic = null
+                                                    practiceInitialPartIndex = pIdx
+                                                },
+                                                shape = RoundedCornerShape(6.dp),
+                                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                                modifier = Modifier.testTag("practice_sub_${subject.subjectId}_part_$pIdx")
+                                            ) {
+                                                Text("भाग ${pIdx + 1} ($startQ-$endQ)", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
 
@@ -331,6 +388,8 @@ fun StudyScreen(
                                         allTopicDocuments.filter { it.topicId == topic.topicId }
                                     }
 
+                                    val topicParts = topicQuestions.chunked(50)
+
                                     Surface(
                                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
                                         shape = RoundedCornerShape(10.dp),
@@ -354,23 +413,65 @@ fun StudyScreen(
                                                         fontWeight = FontWeight.SemiBold
                                                     )
                                                     Text(
-                                                        text = "${topicQuestions.size} प्रश्न • हल: ${topicAttempts.size} (सटीकता: $topicAcc%)",
+                                                        text = "${topicQuestions.size} प्रश्न • हल: ${topicAttempts.size} (सटीकता: $topicAcc%)" +
+                                                            if (topicParts.size > 1) " • ${topicParts.size} भाग (50-50)" else "",
                                                         style = MaterialTheme.typography.labelSmall,
                                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                                     )
                                                 }
 
-                                                Button(
-                                                    onClick = {
-                                                        practiceSubject = subject
-                                                        practiceTopic = topic
-                                                    },
-                                                    colors = ButtonDefaults.buttonColors(containerColor = OliveTertiary),
-                                                    shape = RoundedCornerShape(6.dp),
-                                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
-                                                    modifier = Modifier.testTag("practice_topic_${topic.topicId}")
+                                                if (topicParts.size <= 1) {
+                                                    Button(
+                                                        onClick = {
+                                                            practiceSubject = subject
+                                                            practiceTopic = topic
+                                                            practiceInitialPartIndex = 0
+                                                        },
+                                                        colors = ButtonDefaults.buttonColors(containerColor = OliveTertiary),
+                                                        shape = RoundedCornerShape(6.dp),
+                                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                                                        modifier = Modifier.testTag("practice_topic_${topic.topicId}")
+                                                    ) {
+                                                        Text("अभ्यास करें", style = MaterialTheme.typography.labelSmall)
+                                                    }
+                                                }
+                                            }
+
+                                            // If topic has > 50 questions, show 50-50 part buttons
+                                            if (topicParts.size > 1) {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    verticalAlignment = Alignment.CenterVertically
                                                 ) {
-                                                    Text("अभ्यास करें", style = MaterialTheme.typography.labelSmall)
+                                                    Text(
+                                                        text = "50-50 भाग:",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = OliveTertiary,
+                                                        modifier = Modifier.padding(end = 6.dp)
+                                                    )
+                                                    LazyRow(
+                                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                                        modifier = Modifier.fillMaxWidth()
+                                                    ) {
+                                                        items(topicParts.size) { pIdx ->
+                                                            val startQ = pIdx * 50 + 1
+                                                            val endQ = minOf((pIdx + 1) * 50, topicQuestions.size)
+                                                            Button(
+                                                                onClick = {
+                                                                    practiceSubject = subject
+                                                                    practiceTopic = topic
+                                                                    practiceInitialPartIndex = pIdx
+                                                                },
+                                                                colors = ButtonDefaults.buttonColors(containerColor = OliveTertiary),
+                                                                shape = RoundedCornerShape(6.dp),
+                                                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                                                modifier = Modifier.testTag("practice_topic_${topic.topicId}_part_$pIdx")
+                                                            ) {
+                                                                Text("भाग ${pIdx + 1} ($startQ-$endQ)", style = MaterialTheme.typography.labelSmall)
+                                                            }
+                                                        }
+                                                    }
                                                 }
                                             }
 
@@ -705,10 +806,12 @@ fun StudyScreen(
             subject = currentPracticeSubject,
             topic = practiceTopic,
             questions = targetQuestions,
+            initialPartIndex = practiceInitialPartIndex,
             onRecordAttempt = onRecordAttempt,
             onBack = {
                 practiceSubject = null
                 practiceTopic = null
+                practiceInitialPartIndex = 0
             },
             modifier = modifier
         )
